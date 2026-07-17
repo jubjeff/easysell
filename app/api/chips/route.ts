@@ -24,7 +24,7 @@ export const GET = withJsonError(async function GET() {
 });
 
 export const POST = withJsonError(async function POST(req: NextRequest) {
-  const { nome, telefone, ativado_em, limite_diario_override } = await req.json();
+  const { nome, telefone, ativado_em, limite_diario_override, maturando } = await req.json();
   if (!nome?.trim() || !ativado_em) {
     return NextResponse.json(
       { error: "Nome e data de ativação são obrigatórios." },
@@ -38,6 +38,8 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
       telefone: telefone || null,
       ativado_em,
       limite_diario_override: limite_diario_override ? Number(limite_diario_override) : null,
+      maturando: !!maturando,
+      maturacao_inicio: maturando ? new Date().toISOString().slice(0, 10) : null,
     })
     .select()
     .single();

@@ -67,6 +67,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Esse chip está desativado." }, { status: 422 });
   }
 
+  // gate de maturação: chip em maturação NUNCA dispara para contato frio
+  if (chip.maturando) {
+    const { count } = await client
+      .from("maturation_days")
+      .select("id", { count: "exact", head: true })
+      .eq("chip_id", chip.id)
+      .eq("congelou", false);
+    const totalDias = Math.max(14, Number(settings.maturacao_dias) || 21);
+    const dia = Math.min((count ?? 0) + 1, totalDias);
+    return NextResponse.json(
+      {
+        error:
+          `Este chip ainda está em maturação (Dia ${dia}/${totalDias}). ` +
+          "Usar agora aumenta muito o risco de banimento. Conclua o ciclo na aba Maturação.",
+        code: "em_maturacao",
+      },
+      { status: 422 }
+    );
+  }
+
   // janela de envio
   const janela = inSendWindow(settings);
   if (!janela.ok && !override_janela) {

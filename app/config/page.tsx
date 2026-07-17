@@ -58,18 +58,34 @@ export default function ConfigPage() {
 
       {/* aquecimento */}
       <div className="card space-y-3">
-        <h2 className="text-sm font-bold text-zinc-400">Aquecimento de chip</h2>
-        <div>
-          <label className="label">Teto diário para sessões de aquecimento</label>
-          <input
-            type="number"
-            min={1}
-            className="input max-w-40"
-            defaultValue={s.aquecimento_limite_diario}
-            onBlur={(e) =>
-              e.target.value && patch({ aquecimento_limite_diario: Number(e.target.value) })
-            }
-          />
+        <h2 className="text-sm font-bold text-zinc-400">Aquecimento e maturação de chip</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="label">Teto diário — sessão de aquecimento</label>
+            <input
+              type="number"
+              min={1}
+              className="input"
+              defaultValue={s.aquecimento_limite_diario}
+              onBlur={(e) =>
+                e.target.value && patch({ aquecimento_limite_diario: Number(e.target.value) })
+              }
+            />
+          </div>
+          <div>
+            <label className="label">Duração da maturação (dias, mín. 14)</label>
+            <input
+              type="number"
+              min={14}
+              max={60}
+              className="input"
+              defaultValue={s.maturacao_dias}
+              onBlur={(e) =>
+                e.target.value &&
+                patch({ maturacao_dias: Math.max(14, Number(e.target.value)) })
+              }
+            />
+          </div>
         </div>
         <p className="text-xs text-zinc-500">
           Esse teto vale para <b>qualquer</b> chip enquanto a sessão é do tipo aquecimento — mesmo

@@ -91,6 +91,28 @@ export interface Chip {
   ativado_em: string;
   limite_diario_override: number | null;
   ativo: boolean;
+  maturando: boolean;
+  maturacao_inicio: string | null;
+  perfil_foto: boolean;
+  perfil_nome: boolean;
+  perfil_descricao: boolean;
+  liberado_em: string | null;
+  risco_ate: string | null;
+  created_at: string;
+}
+
+export interface MaturationDay {
+  id: string;
+  chip_id: string;
+  dia: number;
+  msgs_enviadas: number;
+  msgs_recebidas: number;
+  contatos_ativos: number;
+  contatos_novos: number;
+  status_postado: boolean;
+  bloqueios: number;
+  congelou: boolean;
+  notas: string | null;
   created_at: string;
 }
 
@@ -115,6 +137,7 @@ export interface Settings {
   som_ativado: boolean;
   volume: number;
   aquecimento_limite_diario: number;
+  maturacao_dias: number;
 }
 
 export const STAGES: { key: LeadStage; label: string }[] = [

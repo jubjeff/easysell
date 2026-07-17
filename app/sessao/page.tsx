@@ -408,12 +408,18 @@ export default function SessaoPage() {
               <select className="input" value={formChip} onChange={(e) => setFormChip(e.target.value)}>
                 <option value="">Selecione…</option>
                 {chips.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nome} — {c.hoje}/{c.limite_diario_override ?? c.preset.limite} hoje ·{" "}
-                    {c.preset.fase}
+                  <option key={c.id} value={c.id} disabled={c.maturando}>
+                    {c.maturando
+                      ? `${c.nome} — 🌱 em maturação (bloqueado)`
+                      : `${c.nome} — ${c.hoje}/${c.limite_diario_override ?? c.preset.limite} hoje · ${c.preset.fase}`}
                   </option>
                 ))}
               </select>
+              {chips.some((c) => c.maturando) && (
+                <p className="text-xs text-amber-300/80 mt-1">
+                  Chips em maturação não podem disparar — conclua o ciclo na aba 🌱 Maturação.
+                </p>
+              )}
             </div>
             <div>
               <label className="label">Campanha</label>

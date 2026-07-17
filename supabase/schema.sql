@@ -85,8 +85,33 @@ create table chips (
   ativado_em             date not null default current_date,
   limite_diario_override int,
   ativo                  boolean not null default true,
+  -- maturação (aquecimento guiado de chip novo, ~21 dias)
+  maturando              boolean not null default false,
+  maturacao_inicio       date,
+  perfil_foto            boolean not null default false,
+  perfil_nome            boolean not null default false,
+  perfil_descricao       boolean not null default false,
+  liberado_em            timestamptz,
+  risco_ate              timestamptz,
   created_at             timestamptz not null default now()
 );
+
+-- 5b. REGISTRO DIÁRIO DE MATURAÇÃO (1 registro por dia de atividade)
+create table maturation_days (
+  id              uuid primary key default gen_random_uuid(),
+  chip_id         uuid not null references chips(id) on delete cascade,
+  dia             int not null,
+  msgs_enviadas   int not null default 0,
+  msgs_recebidas  int not null default 0,
+  contatos_ativos int not null default 0,
+  contatos_novos  int not null default 0,
+  status_postado  boolean not null default false,
+  bloqueios       int not null default 0,
+  congelou        boolean not null default false,
+  notas           text,
+  created_at      timestamptz not null default now()
+);
+create index maturation_days_chip_idx on maturation_days (chip_id, created_at);
 
 -- 6. SESSÕES DE DISPARO / AQUECIMENTO
 create table dispatch_sessions (
@@ -152,7 +177,8 @@ create table settings (
   dias_uteis                int[] not null default '{1,2,3,4,5}',
   som_ativado               boolean not null default true,
   volume                    numeric(3,2) not null default 0.8,
-  aquecimento_limite_diario int not null default 5
+  aquecimento_limite_diario int not null default 5,
+  maturacao_dias            int not null default 21
 );
 
 insert into settings (id) values (1);

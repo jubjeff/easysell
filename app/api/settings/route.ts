@@ -20,6 +20,7 @@ export async function PATCH(req: NextRequest) {
     "som_ativado",
     "volume",
     "aquecimento_limite_diario",
+    "maturacao_dias",
   ]) {
     if (k in body) patch[k] = body[k];
   }

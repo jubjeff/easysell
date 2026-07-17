@@ -23,6 +23,7 @@ export default function ChipsPage() {
       telefone: "",
       ativado_em: new Date().toISOString().slice(0, 10),
       limite_diario_override: "",
+      maturando: true,
     });
   }
 
@@ -38,6 +39,7 @@ export default function ChipsPage() {
         limite_diario_override: editing.limite_diario_override
           ? Number(editing.limite_diario_override)
           : null,
+        ...(isNew ? { maturando: !!editing.maturando } : {}),
       }),
     });
     if (res.ok) {
@@ -106,6 +108,17 @@ export default function ChipsPage() {
               />
             </div>
           </div>
+          {!editing.id && (
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={!!editing.maturando}
+                onChange={(e) => setEditing({ ...editing, maturando: e.target.checked })}
+              />
+              🌱 Iniciar em maturação (recomendado para chip novo — ~21 dias de aquecimento guiado
+              antes de liberar o disparo)
+            </label>
+          )}
           <p className="text-xs text-zinc-600">
             Presets automáticos: chip novo (&lt;30d) 15/dia · aquecido (30–90d) 40/dia · maduro
             (&gt;90d) 80/dia. Em sessões de <b>aquecimento</b>, o teto configurado em Configurações
@@ -136,6 +149,9 @@ export default function ChipsPage() {
               <h2 className="font-bold">
                 {c.nome}
                 {!c.ativo && <span className="ml-2 badge bg-zinc-800 text-zinc-400">inativo</span>}
+                {c.maturando && (
+                  <span className="ml-2 badge bg-amber-900/60 text-amber-300">🌱 em maturação</span>
+                )}
               </h2>
               <p className="text-sm text-zinc-400">
                 {c.telefone ? `${c.telefone} · ` : ""}

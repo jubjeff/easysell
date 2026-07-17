@@ -8,6 +8,7 @@ const items = [
   { href: "/", label: "Dashboard", icon: "📊" },
   { href: "/sessao", label: "Sessão de disparo", icon: "🚀" },
   { href: "/chips", label: "Chips", icon: "📱" },
+  { href: "/maturacao", label: "Maturação", icon: "🌱" },
   { href: "/captacao", label: "Captação", icon: "🔎" },
   { href: "/funil", label: "Funil", icon: "📋" },
   { href: "/campanhas", label: "Campanhas", icon: "🎯" },
