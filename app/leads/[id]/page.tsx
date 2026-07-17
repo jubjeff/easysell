@@ -48,7 +48,7 @@ export default function LeadPage() {
 
   return (
     <div className="max-w-3xl space-y-5">
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold">{lead.nome}</h1>
           <p className="text-sm text-zinc-400">

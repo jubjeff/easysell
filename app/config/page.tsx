@@ -106,7 +106,7 @@ export default function ConfigPage() {
         </div>
         <div>
           <label className="label">Dias de envio</label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {DIAS.map((d) => (
               <button
                 key={d.n}
@@ -127,7 +127,7 @@ export default function ConfigPage() {
       {/* som */}
       <div className="card space-y-3">
         <h2 className="text-sm font-bold text-zinc-400">Sinalização sonora</h2>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"

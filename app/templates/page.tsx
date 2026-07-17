@@ -110,12 +110,12 @@ export default function TemplatesPage() {
 
       {templates.map((t) => (
         <div key={t.id} className={`card space-y-2 ${!t.ativo ? "opacity-50" : ""}`}>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h2 className="font-bold">
               {t.nome}
               {!t.ativo && <span className="ml-2 badge bg-zinc-800 text-zinc-400">inativo</span>}
             </h2>
-            <div className="flex gap-2 text-sm">
+            <div className="flex gap-2 text-sm flex-wrap">
               <button className="btn-secondary !py-1" onClick={() => setEditing({ ...t })}>
                 Editar
               </button>

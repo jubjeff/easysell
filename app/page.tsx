@@ -33,9 +33,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <h1 className="text-xl font-bold">Dashboard</h1>
-        <Link href="/sessao" className="btn-primary">
+        <Link href="/sessao" className="btn-primary self-start sm:self-auto">
           🚀 Iniciar sessão de disparo
         </Link>
       </div>
@@ -88,9 +88,13 @@ export default function DashboardPage() {
       {/* funil resumido */}
       <div>
         <h2 className="text-sm font-bold text-zinc-400 mb-2">Funil</h2>
-        <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
           {STAGES.map((s) => (
-            <Link href="/funil" key={s.key} className="card text-center hover:border-zinc-600">
+            <Link
+              href="/funil"
+              key={s.key}
+              className="card text-center hover:border-zinc-600 p-2.5 md:p-4"
+            >
               <div className="text-xl font-bold">{m.funil[s.key] ?? 0}</div>
               <div className="text-[11px] text-zinc-400">{s.label}</div>
             </Link>

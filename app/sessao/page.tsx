@@ -481,8 +481,8 @@ export default function SessaoPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       {/* cabeçalho */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <h1 className="text-lg sm:text-xl font-bold">
           {session.tipo === "aquecimento" ? "🔥 Aquecimento" : "🚀 Sessão"} ·{" "}
           {session.campaigns?.nome ?? ""}
           <span className="ml-2 text-sm font-normal text-zinc-400">
@@ -501,7 +501,7 @@ export default function SessaoPage() {
       </div>
 
       {/* progresso */}
-      <div className="card flex items-center justify-between text-sm">
+      <div className="card flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-sm">
         <span>
           Lead <b>{posicaoAtual}</b> de <b>{queue.length}</b>
         </span>

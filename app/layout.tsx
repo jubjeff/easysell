@@ -22,9 +22,9 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${geistSans.variable} font-sans`}>
-        <div className="flex min-h-screen">
+        <div className="flex min-h-screen flex-col md:flex-row">
           <Nav />
-          <main className="flex-1 p-6 max-w-6xl mx-auto w-full">{children}</main>
+          <main className="flex-1 p-4 md:p-6 max-w-6xl mx-auto w-full">{children}</main>
         </div>
       </body>
     </html>

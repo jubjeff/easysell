@@ -21,8 +21,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-zinc-950">
-      <form onSubmit={submit} className="card w-80 space-y-4">
+    <div className="fixed inset-0 flex items-center justify-center bg-zinc-950 px-4">
+      <form onSubmit={submit} className="card w-full max-w-80 space-y-4">
         <h1 className="text-lg font-bold text-emerald-400">EasySell</h1>
         <div>
           <label className="label">Senha de acesso</label>

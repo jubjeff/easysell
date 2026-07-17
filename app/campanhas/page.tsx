@@ -168,7 +168,12 @@ export default function CampanhasPage() {
       )}
 
       {campaigns.map((c) => (
-        <div key={c.id} className={`card flex items-center justify-between ${!c.ativa ? "opacity-50" : ""}`}>
+        <div
+          key={c.id}
+          className={`card flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+            !c.ativa ? "opacity-50" : ""
+          }`}
+        >
           <div>
             <h2 className="font-bold">
               {c.nome}
