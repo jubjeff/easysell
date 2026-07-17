@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withJsonError(async function GET() {
   const { data, error } = await db()
     .from("campaigns")
     .select("*, campaign_templates(template_id, templates(nome))")
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ campaigns: data });
-}
+});
 
 export async function POST(req: NextRequest) {
   const { nome, nicho, cidade, limite_diario, limiar_taxa_resposta, template_ids } =

@@ -18,7 +18,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   const { data: item } = await client
     .from("queue_items")
-    .select("*, dispatch_sessions(campaign_id, chip_id)")
+    .select("*, leads(telefone), dispatch_sessions(campaign_id, chip_id)")
     .eq("id", params.id)
     .single();
   if (!item) return NextResponse.json({ error: "Item não encontrado." }, { status: 404 });
@@ -69,6 +69,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           updated_at: new Date().toISOString(),
         })
         .eq("id", item.lead_id);
+      // registro permanente: esse número nunca mais entra em fila de disparo
+      const telefone = (item as any).leads?.telefone;
+      if (telefone) {
+        await client
+          .from("contacted_phones")
+          .upsert({ telefone }, { onConflict: "telefone", ignoreDuplicates: true });
+      }
     }
     await client
       .from("message_logs")

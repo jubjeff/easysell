@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/phone";
 import { classifyWebsite, computeScore } from "@/lib/score";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 /** GET: lista leads com filtros ?stage=&nicho=&cidade=&q= */
-export async function GET(req: NextRequest) {
+export const GET = withJsonError(async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   let q = db().from("leads").select("*").order("score", { ascending: false });
   if (sp.get("stage")) q = q.eq("stage", sp.get("stage"));
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await q.limit(500);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ leads: data });
-}
+});
 
 /**
  * POST: insere leads em lote (vindos do Places ou CSV), com dedupe por

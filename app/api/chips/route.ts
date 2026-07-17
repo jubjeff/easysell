@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { chipPreset, sentCounts } from "@/lib/limits";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 /** GET: lista chips com preset/idade e contagem de envios já calculados. */
-export async function GET() {
+export const GET = withJsonError(async function GET() {
   const { data, error } = await db()
     .from("chips")
     .select("*")
@@ -20,9 +21,9 @@ export async function GET() {
     }))
   );
   return NextResponse.json({ chips });
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withJsonError(async function POST(req: NextRequest) {
   const { nome, telefone, ativado_em, limite_diario_override } = await req.json();
   if (!nome?.trim() || !ativado_em) {
     return NextResponse.json(
@@ -42,4 +43,4 @@ export async function POST(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ chip: data });
-}
+});

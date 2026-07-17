@@ -9,7 +9,9 @@ export function db(): SupabaseClient {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) {
       throw new Error(
-        "SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY precisam estar no .env.local"
+        "SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY não configuradas. " +
+          "No dev: .env.local. Na Vercel: Settings → Environment Variables " +
+          "(depois de adicionar, faça Redeploy)."
       );
     }
     client = createClient(url, key, { auth: { persistSession: false } });

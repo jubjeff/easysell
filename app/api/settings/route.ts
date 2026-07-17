@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { getSettings } from "@/lib/limits";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withJsonError(async function GET() {
   const settings = await getSettings();
   return NextResponse.json({ settings });
-}
+});
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();

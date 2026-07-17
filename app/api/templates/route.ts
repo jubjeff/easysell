@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = withJsonError(async function GET() {
   const { data, error } = await db()
     .from("templates")
     .select("*")
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ templates: data });
-}
+});
 
 export async function POST(req: NextRequest) {
   const { nome, corpo, social_proof } = await req.json();

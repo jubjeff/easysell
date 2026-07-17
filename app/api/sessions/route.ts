@@ -133,14 +133,20 @@ export async function POST(req: NextRequest) {
   );
   const nichoAlvo = normalizeText(campaign.nicho);
   const cidadeAlvo = normalizeText(campaign.cidade);
-  const { data: candidatos } = await client
-    .from("leads")
-    .select("*")
-    .eq("stage", "novo")
-    .order("score", { ascending: false });
+  const [{ data: candidatos }, { data: jaContactados }] = await Promise.all([
+    client.from("leads").select("*").eq("stage", "novo").order("score", { ascending: false }),
+    client.from("contacted_phones").select("telefone"),
+  ]);
+  // números que já receberam mensagem alguma vez NUNCA voltam para a fila,
+  // mesmo que o lead tenha sido excluído/reimportado ou movido de volta
+  // para 'Novo' no funil
+  const telefonesBloqueados = new Set((jaContactados ?? []).map((r) => r.telefone));
   const leads = (candidatos ?? [])
     .filter(
-      (l) => normalizeText(l.nicho) === nichoAlvo && normalizeText(l.cidade) === cidadeAlvo
+      (l) =>
+        normalizeText(l.nicho) === nichoAlvo &&
+        normalizeText(l.cidade) === cidadeAlvo &&
+        !telefonesBloqueados.has(l.telefone)
     )
     .slice(0, tamanhoFila);
 

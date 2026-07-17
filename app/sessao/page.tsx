@@ -101,8 +101,8 @@ export default function SessaoPage() {
       const chData = await chRes.json();
       setCampaigns((cData.campaigns ?? []).filter((c: any) => c.ativa));
       setChips((chData.chips ?? []).filter((c: any) => c.ativo));
-      if (sData.error) {
-        setError(sData.error);
+      if (sData.error || cData.error || chData.error) {
+        setError(sData.error ?? cData.error ?? chData.error);
       } else if (sData.session) {
         setSession(sData.session);
         setQueue(sData.queue);

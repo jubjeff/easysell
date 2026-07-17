@@ -136,7 +136,15 @@ create index msg_logs_metric_idx on message_logs (template_id, evento);
 create index msg_logs_day_idx    on message_logs (evento, created_at);
 create index msg_logs_chip_idx   on message_logs (chip_id, evento, created_at);
 
--- 9. CONFIG (linha única, preferências globais)
+-- 9. NÚMEROS JÁ CONTACTADOS (registro permanente anti-duplicidade)
+-- Uma vez que um telefone recebeu mensagem, ele nunca mais entra em fila,
+-- mesmo que o lead seja excluído e reimportado. Nunca apagar desta tabela.
+create table contacted_phones (
+  telefone      text primary key,
+  first_sent_at timestamptz not null default now()
+);
+
+-- 10. CONFIG (linha única, preferências globais)
 create table settings (
   id                        int primary key default 1 check (id = 1),
   janela_inicio             time not null default '08:00',
