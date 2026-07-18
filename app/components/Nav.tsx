@@ -22,11 +22,24 @@ const items: Item[] = [
   { href: "/config", label: "Configurações", icon: "⚙️" },
 ];
 
+/** Itens fixos da bottom nav mobile (o resto vive na aba "Mais"). */
+const bottomHrefs = ["/", "/sessao", "/funil", "/comissoes"];
+
+function Brand({ small = false }: { small?: boolean }) {
+  return (
+    <span className={`font-mono font-semibold ${small ? "text-base" : "text-lg"}`}>
+      <span className="text-lima">&lt;</span>
+      <span className="text-paper">Tégui</span>
+      <span className="text-lima"> /&gt;</span>
+    </span>
+  );
+}
+
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const [me, setMe] = useState<any>(null);
-  const [open, setOpen] = useState(false);
+  const [maisAberto, setMaisAberto] = useState(false);
 
   useEffect(() => {
     fetch("/api/me")
@@ -35,10 +48,19 @@ export default function Nav() {
       .catch(() => {});
   }, [pathname]);
 
+  useEffect(() => {
+    setMaisAberto(false);
+  }, [pathname]);
+
   if (pathname === "/login") return null;
 
   const isAdmin = me?.role === "admin";
   const visible = items.filter((it) => !it.adminOnly || isAdmin);
+  const bottomItems = visible.filter((it) => bottomHrefs.includes(it.href));
+  const maisItems = visible.filter((it) => !bottomHrefs.includes(it.href));
+
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   async function logout() {
     await supabaseBrowser().auth.signOut();
@@ -46,80 +68,129 @@ export default function Nav() {
     router.refresh();
   }
 
-  const navBody = (
+  return (
     <>
-      <div className="flex items-center justify-between mb-4 px-2">
-        <div className="text-lg font-bold text-emerald-400">EasySell</div>
-        <button
-          className="sm:hidden text-zinc-400 text-xl leading-none"
-          onClick={() => setOpen(false)}
-          aria-label="Fechar menu"
-        >
-          ✕
-        </button>
+      {/* ===== desktop: sidebar ===== */}
+      <aside className="hidden md:flex w-60 shrink-0 border-r border-navy-800 bg-navy-900/40 p-4 flex-col sticky top-0 h-screen">
+        <div className="px-2 mb-6">
+          <Brand />
+        </div>
+        <nav className="flex flex-col gap-0.5">
+          {visible.map((it) => {
+            const active = isActive(it.href);
+            return (
+              <Link
+                key={it.href}
+                href={it.href}
+                className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
+                  active
+                    ? "bg-viola-faint text-paper font-medium"
+                    : "text-dim hover:text-paper hover:bg-navy-800/70"
+                }`}
+              >
+                {active && (
+                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-viola" />
+                )}
+                <span className="text-base leading-none">{it.icon}</span> {it.label}
+              </Link>
+            );
+          })}
+        </nav>
+        <div className="mt-auto pt-4 border-t border-navy-800">
+          {me && (
+            <p className="px-3 font-mono text-[11px] text-dim mb-2 truncate">
+              {me.nome}
+              {isAdmin && <span className="text-viola"> · admin</span>}
+            </p>
+          )}
+          <button
+            onClick={logout}
+            className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm text-dim hover:text-red-300 hover:bg-red-950/40 transition-colors"
+          >
+            <span>↩</span> Sair
+          </button>
+        </div>
+      </aside>
+
+      {/* ===== mobile: topo mínimo com a marca ===== */}
+      <div className="md:hidden sticky top-0 z-30 flex items-center justify-center border-b border-navy-800 bg-navy-950/90 backdrop-blur px-4 py-3">
+        <Brand small />
       </div>
-      <nav className="flex flex-col gap-1">
-        {visible.map((it) => {
-          const active = it.href === "/" ? pathname === "/" : pathname.startsWith(it.href);
+
+      {/* ===== mobile: sheet "Mais" ===== */}
+      {maisAberto && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/60"
+          onClick={() => setMaisAberto(false)}
+        >
+          <div
+            className="absolute bottom-16 inset-x-2 rounded-2xl bg-navy-900 border border-navy-700 p-3 animate-settle-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="grid grid-cols-2 gap-1">
+              {maisItems.map((it) => (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm ${
+                    isActive(it.href)
+                      ? "bg-viola-faint text-paper font-medium"
+                      : "text-dim hover:text-paper hover:bg-navy-800"
+                  }`}
+                >
+                  <span>{it.icon}</span> {it.label}
+                </Link>
+              ))}
+            </div>
+            <div className="mt-2 pt-2 border-t border-navy-800 flex items-center justify-between px-3">
+              {me && (
+                <p className="font-mono text-[11px] text-dim truncate">
+                  {me.nome}
+                  {isAdmin && <span className="text-viola"> · admin</span>}
+                </p>
+              )}
+              <button onClick={logout} className="text-sm text-dim hover:text-red-300 py-1.5">
+                ↩ Sair
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== mobile: bottom nav — polegar primeiro ===== */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-navy-800 bg-navy-950/95 backdrop-blur flex items-stretch">
+        {bottomItems.map((it) => {
+          const active = isActive(it.href);
+          const central = it.href === "/sessao";
           return (
             <Link
               key={it.href}
               href={it.href}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                active
-                  ? "bg-emerald-600/15 text-emerald-300 font-medium"
-                  : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60"
+              className={`flex-1 flex flex-col items-center gap-0.5 pt-2 pb-2.5 text-[10px] font-mono transition-colors ${
+                active ? "text-lima" : "text-dim"
               }`}
             >
-              <span>{it.icon}</span> {it.label}
+              <span
+                className={`text-lg leading-none ${
+                  central && active ? "drop-shadow-[0_0_6px_rgba(163,230,53,0.5)]" : ""
+                }`}
+              >
+                {it.icon}
+              </span>
+              {it.label.split(" ")[0]}
             </Link>
           );
         })}
-      </nav>
-      <div className="mt-auto pt-4 border-t border-zinc-800">
-        {me && (
-          <p className="px-3 text-xs text-zinc-500 mb-2">
-            {me.nome}
-            {isAdmin && <span className="text-emerald-400"> · admin</span>}
-          </p>
-        )}
         <button
-          onClick={logout}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-zinc-400 hover:text-red-300 hover:bg-red-950/40"
+          onClick={() => setMaisAberto((v) => !v)}
+          className={`flex-1 flex flex-col items-center gap-0.5 pt-2 pb-2.5 text-[10px] font-mono ${
+            maisAberto ? "text-paper" : "text-dim"
+          }`}
         >
-          <span>↩</span> Sair
+          <span className="text-lg leading-none">☰</span>
+          Mais
         </button>
-      </div>
-    </>
-  );
-
-  return (
-    <>
-      {/* topbar mobile */}
-      <div className="sm:hidden sticky top-0 z-30 flex items-center justify-between border-b border-zinc-800 bg-zinc-900/80 backdrop-blur px-4 py-3">
-        <div className="text-base font-bold text-emerald-400">EasySell</div>
-        <button className="text-zinc-300 text-xl" onClick={() => setOpen(true)} aria-label="Abrir menu">
-          ☰
-        </button>
-      </div>
-
-      {/* overlay mobile */}
-      {open && (
-        <div className="sm:hidden fixed inset-0 z-40 bg-black/60" onClick={() => setOpen(false)}>
-          <aside
-            className="absolute left-0 top-0 h-full w-64 bg-zinc-900 border-r border-zinc-800 p-4 flex flex-col"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {navBody}
-          </aside>
-        </div>
-      )}
-
-      {/* sidebar desktop */}
-      <aside className="hidden sm:flex w-56 shrink-0 border-r border-zinc-800 bg-zinc-900/40 p-4 flex-col sticky top-0 h-screen">
-        {navBody}
-      </aside>
+      </nav>
     </>
   );
 }
