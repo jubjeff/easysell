@@ -5,7 +5,19 @@ import Link from "next/link";
 import { STAGES, LeadStage } from "@/lib/types";
 import { formatPhone } from "@/lib/phone";
 
-const BRL = (n: number) => Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const BRL = (n: number) =>
+  Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+/** Rampa de cor por estágio: violeta (frio) → lima (ganho); perdido apagado. */
+const STAGE_COLOR: Record<LeadStage, string> = {
+  novo: "#8B7CF6",
+  contactado: "#7C86F6",
+  respondeu: "#5FA8E6",
+  demo_enviada: "#4FC7BE",
+  negociacao: "#86D24E",
+  fechado: "#A3E635",
+  perdido: "#5B6577",
+};
 
 export default function FunilPage() {
   const [leads, setLeads] = useState<any[]>([]);
@@ -15,6 +27,7 @@ export default function FunilPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [vendedores, setVendedores] = useState<any[]>([]);
   const [filtroVend, setFiltroVend] = useState("");
+  const [mobileStage, setMobileStage] = useState<LeadStage>("novo");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,12 +71,21 @@ export default function FunilPage() {
     });
   }
 
-  if (loading) return <p className="text-zinc-500">Carregando…</p>;
+  if (loading)
+    return <p className="font-mono text-sm text-dim animate-pulse">carregando funil…</p>;
+
+  const total = leads.length;
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-bold">Funil</h1>
+      <div className="flex items-end justify-between gap-3 flex-wrap">
+        <div>
+          <span className="tag-state text-dim">funil</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">
+            Pipeline
+            <span className="data text-dim text-base font-normal ml-2">{total} leads</span>
+          </h1>
+        </div>
         {isAdmin && (
           <select
             className="input !w-auto"
@@ -80,15 +102,20 @@ export default function FunilPage() {
           </select>
         )}
       </div>
-      <div className="flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
+
+      {/* ===== desktop: board Kanban com drag-drop ===== */}
+      <div className="hidden md:flex gap-3 overflow-x-auto pb-4 -mx-2 px-2">
         {STAGES.map((s) => {
           const col = leads.filter((l) => l.stage === s.key);
+          const cor = STAGE_COLOR[s.key];
+          const ativo = over === s.key;
           return (
             <div
               key={s.key}
-              className={`w-60 shrink-0 rounded-xl border p-2 transition-colors ${
-                over === s.key ? "border-emerald-500 bg-emerald-950/20" : "border-zinc-800 bg-zinc-900/40"
+              className={`w-64 shrink-0 rounded-2xl bg-navy-900/50 transition-colors ${
+                ativo ? "ring-2 ring-inset" : ""
               }`}
+              style={ativo ? ({ "--tw-ring-color": cor } as React.CSSProperties) : undefined}
               onDragOver={(e) => {
                 e.preventDefault();
                 setOver(s.key);
@@ -100,44 +127,118 @@ export default function FunilPage() {
                 setOver(null);
               }}
             >
-              <div className="text-xs font-bold text-zinc-400 px-2 py-1 flex justify-between">
-                {s.label} <span className="text-zinc-600">{col.length}</span>
+              {/* filete de cor + cabeçalho */}
+              <div className="h-0.5 rounded-t-2xl" style={{ background: cor }} />
+              <div className="flex items-center justify-between px-3 py-2.5">
+                <span className="text-xs font-semibold tracking-wide text-paper">{s.label}</span>
+                <span className="data text-xs" style={{ color: cor }}>
+                  {String(col.length).padStart(2, "0")}
+                </span>
               </div>
-              <div className="space-y-2 min-h-16">
+              <div className="space-y-2 min-h-16 px-2 pb-2">
                 {col.map((l) => (
                   <div
                     key={l.id}
                     draggable
                     onDragStart={() => setDragId(l.id)}
-                    className="card p-3 cursor-grab active:cursor-grabbing hover:border-zinc-600"
+                    className="group rounded-xl bg-navy-800/70 p-3 cursor-grab active:cursor-grabbing hover:bg-navy-800 transition-colors animate-settle-in"
                   >
-                    <Link href={`/leads/${l.id}`} className="font-medium text-sm hover:text-emerald-300">
-                      {l.nome}
-                    </Link>
-                    <p className="text-xs text-zinc-500 mt-0.5">
-                      {l.cidade} · {formatPhone(l.telefone)}
-                    </p>
-                    <div className="flex items-center justify-between mt-1.5">
-                      <span className="text-[11px] text-zinc-500">{l.nicho}</span>
-                      <span className="badge bg-emerald-900/60 text-emerald-300">{l.score}</span>
-                    </div>
-                    {l.stage === "fechado" && l.valor_venda != null ? (
-                      <p className="text-xs text-emerald-400 mt-1 font-semibold">{BRL(l.valor_venda)}</p>
-                    ) : (
-                      l.valor_proposto != null && (
-                        <p className="text-xs text-zinc-400 mt-1">proposta {BRL(l.valor_proposto)}</p>
-                      )
-                    )}
+                    <Card lead={l} />
                   </div>
                 ))}
+                {col.length === 0 && (
+                  <p className="font-mono text-[10px] text-dim/40 text-center py-4">vazio</p>
+                )}
               </div>
             </div>
           );
         })}
       </div>
-      <p className="text-xs text-zinc-500">
-        Arraste os cards entre colunas. Ao soltar em <b>Fechado</b>, informe o valor da venda — a comissão é calculada automaticamente.
+
+      {/* ===== mobile: seletor de estágio + lista vertical ===== */}
+      <div className="md:hidden space-y-3">
+        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-1">
+          {STAGES.map((s) => {
+            const n = leads.filter((l) => l.stage === s.key).length;
+            const sel = mobileStage === s.key;
+            const cor = STAGE_COLOR[s.key];
+            return (
+              <button
+                key={s.key}
+                onClick={() => setMobileStage(s.key)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
+                  sel ? "text-navy-950" : "text-dim border-navy-700 bg-navy-900"
+                }`}
+                style={sel ? { background: cor, borderColor: cor } : undefined}
+              >
+                {s.label} <span className="data ml-0.5">{n}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-2">
+          {leads
+            .filter((l) => l.stage === mobileStage)
+            .map((l) => (
+              <div key={l.id} className="card !p-3 animate-settle-in">
+                <Card lead={l} />
+                <div className="mt-2.5 pt-2.5 border-t border-navy-800">
+                  <label className="font-mono text-[10px] text-dim mr-2">mover →</label>
+                  <select
+                    className="input !w-auto !py-1 !px-2 text-xs inline-block"
+                    value={l.stage}
+                    onChange={(e) => moveTo(l.id, e.target.value as LeadStage)}
+                  >
+                    {STAGES.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ))}
+          {leads.filter((l) => l.stage === mobileStage).length === 0 && (
+            <p className="card text-center font-mono text-xs text-dim py-8">
+              nenhum lead em {STAGES.find((s) => s.key === mobileStage)?.label.toLowerCase()}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <p className="hidden md:block font-mono text-[11px] text-dim/70">
+        arraste os cards entre colunas · ao soltar em <b className="text-lima">Fechado</b>, informe o
+        valor da venda — a comissão sai automática
       </p>
     </div>
+  );
+}
+
+/** Card de lead: nome forte → metadados apagados → valor. */
+function Card({ lead: l }: { lead: any }) {
+  return (
+    <>
+      <div className="flex items-start justify-between gap-2">
+        <Link
+          href={`/leads/${l.id}`}
+          className="font-medium text-sm text-paper hover:text-lima transition-colors leading-snug"
+        >
+          {l.nome}
+        </Link>
+        <span className="data text-[11px] text-dim shrink-0 mt-0.5">{l.score}</span>
+      </div>
+      <p className="font-mono text-[11px] text-dim mt-1">
+        {l.nicho} · {l.cidade}
+      </p>
+      <p className="data text-[11px] text-dim/70 mt-0.5">{formatPhone(l.telefone)}</p>
+      {l.stage === "fechado" && l.valor_venda != null ? (
+        <p className="data text-sm text-lima font-semibold mt-1.5">{BRL(l.valor_venda)}</p>
+      ) : (
+        l.valor_proposto != null && (
+          <p className="data text-[11px] text-dim mt-1.5">proposta {BRL(l.valor_proposto)}</p>
+        )
+      )}
+    </>
   );
 }
