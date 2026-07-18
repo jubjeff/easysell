@@ -12,7 +12,8 @@ export function withJsonError<A extends any[]>(
     try {
       return await fn(...args);
     } catch (e: any) {
-      return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
+      const status = typeof e?.status === "number" ? e.status : 500;
+      return NextResponse.json({ error: String(e?.message ?? e) }, { status });
     }
   };
 }

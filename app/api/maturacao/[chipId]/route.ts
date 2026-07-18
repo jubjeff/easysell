@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { getSettings } from "@/lib/limits";
 import { maturationState } from "@/lib/maturacao";
+import { requireUser, scopeFilter } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
 import { Chip, MaturationDay } from "@/lib/types";
 
@@ -19,10 +20,14 @@ export const PATCH = withJsonError(async function PATCH(
   req: NextRequest,
   { params }: { params: { chipId: string } }
 ) {
+  const me = await requireUser();
+  const scope = scopeFilter(me);
   const body = await req.json();
   const client = db();
 
-  const { data: chip } = await client.from("chips").select("*").eq("id", params.chipId).single();
+  let cq = client.from("chips").select("*").eq("id", params.chipId);
+  if (scope) cq = cq.eq("vendedor_id", scope);
+  const { data: chip } = await cq.maybeSingle();
   if (!chip) return NextResponse.json({ error: "Chip não encontrado." }, { status: 404 });
 
   if (body.action === "iniciar") {
@@ -65,7 +70,7 @@ export const PATCH = withJsonError(async function PATCH(
   if (body.action === "liberar") {
     const [{ data: days }, settings] = await Promise.all([
       client.from("maturation_days").select("*").eq("chip_id", params.chipId).order("created_at"),
-      getSettings(),
+      getSettings(chip.vendedor_id ?? me.id),
     ]);
     const state = maturationState(chip as Chip, (days ?? []) as MaturationDay[], settings);
     if (!state.liberavel) {

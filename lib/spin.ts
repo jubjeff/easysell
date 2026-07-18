@@ -12,14 +12,15 @@ export function resolveSpin(text: string): string {
   });
 }
 
-/** Preenche as variáveis do template com dados do lead. */
-function fillVariables(text: string, lead: Lead): string {
+/** Preenche as variáveis do template com dados do lead e do vendedor. */
+function fillVariables(text: string, lead: Lead, vendedorNome = ""): string {
   return text
     .replaceAll("{nome_negocio}", lead.nome)
     .replaceAll("{cidade}", lead.cidade)
     .replaceAll("{nicho}", lead.nicho)
     .replaceAll("{rating}", lead.rating != null ? String(lead.rating) : "")
-    .replaceAll("{qtd_avaliacoes}", String(lead.qtd_avaliacoes ?? 0));
+    .replaceAll("{qtd_avaliacoes}", String(lead.qtd_avaliacoes ?? 0))
+    .replaceAll("{vendedor_nome}", vendedorNome);
 }
 
 /**
@@ -27,7 +28,7 @@ function fillVariables(text: string, lead: Lead): string {
  * rating >= 4 e pelo menos 3 avaliações), variáveis preenchidas e spins
  * resolvidos por último para variar a cada chamada.
  */
-export function generateMessage(template: Template, lead: Lead): string {
+export function generateMessage(template: Template, lead: Lead, vendedorNome = ""): string {
   let corpo = template.corpo;
 
   const temProva =
@@ -35,7 +36,7 @@ export function generateMessage(template: Template, lead: Lead): string {
   const bloco = temProva && template.social_proof ? template.social_proof : "";
   corpo = corpo.replaceAll("{social_proof}", bloco);
 
-  corpo = fillVariables(corpo, lead);
+  corpo = fillVariables(corpo, lead, vendedorNome);
   corpo = resolveSpin(corpo);
   return corpo.replace(/[ \t]{2,}/g, " ").trim();
 }
@@ -55,20 +56,21 @@ export function generateUniqueMessage(
   template: Template,
   lead: Lead,
   usedHashes: Set<string>,
-  maxTries = 10
+  maxTries = 10,
+  vendedorNome = ""
 ): { mensagem: string; hash: string } {
   for (let i = 0; i < maxTries; i++) {
-    const mensagem = generateMessage(template, lead);
+    const mensagem = generateMessage(template, lead, vendedorNome);
     const hash = messageHash(mensagem);
     if (!usedHashes.has(hash)) return { mensagem, hash };
   }
   const sufixos = ["Abraço!", "Fico no aguardo!", "Qualquer coisa estou por aqui!", "Obrigado!"];
   for (const sufixo of sufixos) {
-    const mensagem = generateMessage(template, lead) + " " + sufixo;
+    const mensagem = generateMessage(template, lead, vendedorNome) + " " + sufixo;
     const hash = messageHash(mensagem);
     if (!usedHashes.has(hash)) return { mensagem, hash };
   }
   // último recurso: nunca deve acontecer na prática
-  const mensagem = generateMessage(template, lead) + " (ref " + Date.now() + ")";
+  const mensagem = generateMessage(template, lead, vendedorNome) + " (ref " + Date.now() + ")";
   return { mensagem, hash: messageHash(mensagem) };
 }

@@ -74,6 +74,39 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ranking de vendedores — só admin */}
+      {m.ranking && m.ranking.length > 0 && (
+        <div className="card">
+          <h2 className="text-sm font-bold text-zinc-400 mb-3">🏆 Desempenho por vendedor</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-zinc-500 border-b border-zinc-800">
+                  <th className="py-2 pr-2">#</th>
+                  <th className="py-2 pr-2">Vendedor</th>
+                  <th className="py-2 pr-2 text-right">Trabalhados</th>
+                  <th className="py-2 pr-2 text-right">Resposta</th>
+                  <th className="py-2 pr-2 text-right">Fechamento</th>
+                  <th className="py-2 pr-2 text-right">Fechados</th>
+                </tr>
+              </thead>
+              <tbody>
+                {m.ranking.map((v: any, i: number) => (
+                  <tr key={v.id} className="border-b border-zinc-800/50">
+                    <td className="py-1.5 pr-2 text-zinc-500">{i + 1}º</td>
+                    <td className="py-1.5 pr-2 font-medium">{v.nome}</td>
+                    <td className="py-1.5 pr-2 text-right text-zinc-400">{v.trabalhados}</td>
+                    <td className="py-1.5 pr-2 text-right text-zinc-300">{v.taxaResposta}%</td>
+                    <td className="py-1.5 pr-2 text-right text-zinc-300">{v.taxaFechamento}%</td>
+                    <td className="py-1.5 pr-2 text-right font-bold text-emerald-400">{v.fechados}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {alertas.length > 0 && (
         <div className="card border-amber-800 bg-amber-950/30">
           <p className="text-sm font-bold text-amber-300 mb-1">⚠️ Taxa de resposta baixa</p>

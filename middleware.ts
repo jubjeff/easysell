@@ -1,29 +1,54 @@
-import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
 
-async function sha256(text: string): Promise<string> {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
+/**
+ * Middleware de sessão Supabase: refresca os cookies de auth e redireciona
+ * quem não está logado para /login. A autorização fina (admin vs vendedor,
+ * isolamento por vendedor) é feita nas rotas + RLS do Postgres.
+ */
 export async function middleware(req: NextRequest) {
-  const password = process.env.APP_PASSWORD;
-  // sem senha configurada = acesso livre (dev local)
-  if (!password) return NextResponse.next();
+  let res = NextResponse.next({ request: req });
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(list) {
+          list.forEach(({ name, value }) => req.cookies.set(name, value));
+          res = NextResponse.next({ request: req });
+          list.forEach(({ name, value, options }) => res.cookies.set(name, value, options));
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { pathname } = req.nextUrl;
-  if (pathname === "/login" || pathname === "/api/auth") return NextResponse.next();
+  const isLogin = pathname === "/login";
 
-  const cookie = req.cookies.get("easysell_auth")?.value;
-  if (cookie && cookie === (await sha256(password))) return NextResponse.next();
-
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  if (!user && !isLogin) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Não autorizado." }, { status: 401 });
+    }
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
-  const url = req.nextUrl.clone();
-  url.pathname = "/login";
-  return NextResponse.redirect(url);
+
+  if (user && isLogin) {
+    const url = req.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  return res;
 }
 
 export const config = {

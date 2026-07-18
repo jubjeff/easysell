@@ -3,17 +3,20 @@ import { db } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/phone";
 import { classifyWebsite, computeScore } from "@/lib/score";
 import { searchOsm } from "@/lib/osm";
+import { requireAdmin } from "@/lib/auth";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 /**
- * POST { nicho, cidade, pageToken?, provider? }
+ * POST { nicho, cidade, pageToken?, provider? } — captação, admin only.
  * provider "google": Places API (New) Text Search — telefone/site/rating na
  * mesma chamada. provider "osm" (default sem chave Google): Overpass API,
  * gratuito, sem rating.
  * Retorna os resultados já classificados e marcados como duplicados ou não.
  */
-export async function POST(req: NextRequest) {
+export const POST = withJsonError(async function POST(req: NextRequest) {
+  await requireAdmin();
   const key = process.env.GOOGLE_PLACES_API_KEY;
   const { nicho, cidade, pageToken, provider } = await req.json();
   if (!nicho || !cidade) {
@@ -112,7 +115,7 @@ export async function POST(req: NextRequest) {
     .sort((a, b) => b.score - a.score);
 
   return NextResponse.json({ results: withDupe, nextPageToken: data.nextPageToken ?? null });
-}
+});
 
 /** Captação gratuita via OpenStreetMap (Overpass). Sem rating; sem paginação. */
 async function searchViaOsm(nicho: string, cidade: string) {

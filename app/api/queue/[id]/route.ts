@@ -1,34 +1,45 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { messageHash } from "@/lib/spin";
+import { requireUser, scopeFilter } from "@/lib/auth";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 /**
- * PATCH em um item da fila.
+ * PATCH em um item da fila (só da própria sessão).
  * body.action:
  *  - "enviado" | "numero_invalido" | "pulado": resolve o item (e move o
  *    lead para 'contactado' quando enviado) + grava log
  *  - "copiada": só grava log de cópia
  *  - "editar": body.mensagem substitui o texto (grava log 'editada')
  */
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = withJsonError(async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const me = await requireUser();
+  const scope = scopeFilter(me);
   const body = await req.json();
   const client = db();
 
   const { data: item } = await client
     .from("queue_items")
-    .select("*, leads(telefone), dispatch_sessions(campaign_id, chip_id)")
+    .select("*, leads(telefone), dispatch_sessions(campaign_id, chip_id, vendedor_id)")
     .eq("id", params.id)
     .single();
   if (!item) return NextResponse.json({ error: "Item não encontrado." }, { status: 404 });
 
   const session = (item as any).dispatch_sessions;
+  if (scope && session?.vendedor_id !== scope) {
+    return NextResponse.json({ error: "Este item não é seu." }, { status: 403 });
+  }
   const logBase = {
     lead_id: item.lead_id,
     queue_item_id: item.id,
     campaign_id: session?.campaign_id ?? null,
     chip_id: session?.chip_id ?? null,
+    vendedor_id: session?.vendedor_id ?? null,
     template_id: item.template_id,
   };
 
@@ -84,4 +95,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   return NextResponse.json({ error: "Ação inválida." }, { status: 400 });
-}
+});

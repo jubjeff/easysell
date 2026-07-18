@@ -1,32 +1,41 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { chipPreset, sentCounts } from "@/lib/limits";
+import { requireUser, scopeFilter } from "@/lib/auth";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 const RESPONDEU = new Set(["respondeu", "demo_enviada", "negociacao", "fechado"]);
 
-/** Métricas agregadas: funil, taxa de resposta por nicho/cidade/template, saúde do chip. */
-export async function GET() {
-  try {
-    return await buildMetrics();
-  } catch (e: any) {
-    return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
-  }
-}
+/** Métricas do vendedor logado (admin vê tudo): funil, taxa de resposta, saúde dos chips. */
+export const GET = withJsonError(async function GET() {
+  const me = await requireUser();
+  return buildMetrics(scopeFilter(me));
+});
 
-async function buildMetrics() {
+async function buildMetrics(scope: string | null) {
   const client = db();
+
+  let leadsQ = client.from("leads").select("id, stage, nicho, cidade, vendedor_id");
+  let enviosQ = client
+    .from("message_logs")
+    .select("lead_id, template_id, campaign_id, vendedor_id")
+    .eq("evento", "enviado");
+  let chipsQ = client.from("chips").select("*").eq("ativo", true);
+  if (scope) {
+    leadsQ = leadsQ.eq("vendedor_id", scope);
+    enviosQ = enviosQ.eq("vendedor_id", scope);
+    chipsQ = chipsQ.eq("vendedor_id", scope);
+  }
+
   const [{ data: leads }, { data: envios }, { data: templates }, { data: campaigns }, { data: chips }] =
     await Promise.all([
-      client.from("leads").select("id, stage, nicho, cidade"),
-      client
-        .from("message_logs")
-        .select("lead_id, template_id, campaign_id")
-        .eq("evento", "enviado"),
+      leadsQ,
+      enviosQ,
       client.from("templates").select("id, nome"),
       client.from("campaigns").select("id, nome, limiar_taxa_resposta"),
-      client.from("chips").select("*").eq("ativo", true),
+      chipsQ,
     ]);
 
   const leadById = new Map((leads ?? []).map((l) => [l.id, l]));
@@ -90,6 +99,40 @@ async function buildMetrics() {
     })
   );
 
+  // ranking por vendedor — só no modo admin (scope null)
+  let ranking: any[] | null = null;
+  if (scope === null) {
+    const { data: vendedores } = await client
+      .from("profiles")
+      .select("id, nome")
+      .eq("role", "vendedor");
+    const RESP_ALEM = ["respondeu", "demo_enviada", "negociacao", "fechado"];
+    // leads trabalhados = já saíram de 'novo'
+    const porVend = new Map<string, { trabalhados: number; responderam: number; fechados: number }>();
+    for (const l of leads ?? []) {
+      if (!l.vendedor_id) continue;
+      if (!porVend.has(l.vendedor_id))
+        porVend.set(l.vendedor_id, { trabalhados: 0, responderam: 0, fechados: 0 });
+      const a = porVend.get(l.vendedor_id)!;
+      if (l.stage !== "novo") a.trabalhados++;
+      if (RESP_ALEM.includes(l.stage)) a.responderam++;
+      if (l.stage === "fechado") a.fechados++;
+    }
+    ranking = (vendedores ?? [])
+      .map((v) => {
+        const a = porVend.get(v.id) ?? { trabalhados: 0, responderam: 0, fechados: 0 };
+        return {
+          id: v.id,
+          nome: v.nome,
+          trabalhados: a.trabalhados,
+          taxaResposta: a.trabalhados ? Math.round((a.responderam / a.trabalhados) * 1000) / 10 : 0,
+          taxaFechamento: a.trabalhados ? Math.round((a.fechados / a.trabalhados) * 1000) / 10 : 0,
+          fechados: a.fechados,
+        };
+      })
+      .sort((a, b) => b.fechados - a.fechados || b.taxaResposta - a.taxaResposta);
+  }
+
   return NextResponse.json({
     funil,
     porTemplate: porTemplate.sort((a, b) => b.taxa - a.taxa),
@@ -102,5 +145,6 @@ async function buildMetrics() {
       taxa: demoOuAlem ? Math.round((fechados / demoOuAlem) * 1000) / 10 : 0,
     },
     saudeChips,
+    ranking,
   });
 }

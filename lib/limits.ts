@@ -15,10 +15,22 @@ export function chipPreset(ativadoEm: string): {
   return { idadeDias, fase: "Chip maduro (> 90 dias)", limite: 80 };
 }
 
-export async function getSettings(): Promise<Settings> {
-  const { data, error } = await db().from("settings").select("*").eq("id", 1).single();
-  if (error) throw new Error("Erro ao ler settings: " + error.message);
-  return data as Settings;
+/** Config do vendedor (janela, teto de aquecimento…). Cria com defaults se não existir. */
+export async function getSettings(vendedorId: string): Promise<Settings> {
+  const client = db();
+  const { data } = await client
+    .from("settings")
+    .select("*")
+    .eq("vendedor_id", vendedorId)
+    .maybeSingle();
+  if (data) return data as Settings;
+  const { data: created, error } = await client
+    .from("settings")
+    .insert({ vendedor_id: vendedorId })
+    .select()
+    .single();
+  if (error) throw new Error("Erro ao criar settings: " + error.message);
+  return created as Settings;
 }
 
 export async function getChip(id: string): Promise<Chip | null> {

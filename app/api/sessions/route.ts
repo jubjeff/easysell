@@ -3,24 +3,20 @@ import { db } from "@/lib/supabase";
 import { getSettings, getChip, effectiveDailyLimit, sentCounts, inSendWindow } from "@/lib/limits";
 import { generateUniqueMessage } from "@/lib/spin";
 import { normalizeText } from "@/lib/text";
+import { requireUser } from "@/lib/auth";
+import { withJsonError } from "@/lib/api";
 import { Campaign, Lead, Template } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-/** GET: retorna a sessão ativa/pausada (se houver) com fila e leads. */
-export async function GET() {
-  try {
-    return await getActiveSession();
-  } catch (e: any) {
-    return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
-  }
-}
-
-async function getActiveSession() {
+/** GET: sessão ativa/pausada do vendedor logado (se houver) com fila e leads. */
+export const GET = withJsonError(async function GET() {
+  const me = await requireUser();
   const client = db();
   const { data: session } = await client
     .from("dispatch_sessions")
     .select("*, campaigns(*), chips(*)")
+    .eq("vendedor_id", me.id)
     .in("status", ["ativa", "pausada"])
     .order("started_at", { ascending: false })
     .limit(1)
@@ -34,7 +30,7 @@ async function getActiveSession() {
     .eq("session_id", session.id)
     .order("posicao");
 
-  const settings = await getSettings();
+  const settings = await getSettings(me.id);
   const chip = session.chips;
   const counts = await sentCounts(session.chip_id);
   return NextResponse.json({
@@ -42,10 +38,11 @@ async function getActiveSession() {
     queue: queue ?? [],
     limits: { diario: effectiveDailyLimit(chip, session.tipo, settings), ...counts },
   });
-}
+});
 
 /** POST: cria sessão + monta a fila do dia com mensagens geradas. */
-export async function POST(req: NextRequest) {
+export const POST = withJsonError(async function POST(req: NextRequest) {
+  const me = await requireUser();
   const body = await req.json();
   const {
     campaign_id,
@@ -59,10 +56,13 @@ export async function POST(req: NextRequest) {
   const sessionType = tipo === "aquecimento" ? "aquecimento" : "disparo";
 
   const client = db();
-  const settings = await getSettings();
+  const settings = await getSettings(me.id);
 
   const chip = chip_id ? await getChip(chip_id) : null;
   if (!chip) return NextResponse.json({ error: "Selecione um chip." }, { status: 400 });
+  if (chip.vendedor_id !== me.id) {
+    return NextResponse.json({ error: "Esse chip não é seu." }, { status: 403 });
+  }
   if (!chip.ativo) {
     return NextResponse.json({ error: "Esse chip está desativado." }, { status: 422 });
   }
@@ -93,16 +93,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: janela.motivo, code: "fora_da_janela" }, { status: 422 });
   }
 
-  // sessão já aberta?
+  // sessão já aberta (deste vendedor)?
   const { data: aberta } = await client
     .from("dispatch_sessions")
     .select("id")
+    .eq("vendedor_id", me.id)
     .in("status", ["ativa", "pausada"])
     .limit(1)
     .maybeSingle();
   if (aberta) {
     return NextResponse.json(
-      { error: "Já existe uma sessão aberta. Encerre-a antes de criar outra." },
+      { error: "Você já tem uma sessão aberta. Encerre-a antes de criar outra." },
       { status: 409 }
     );
   }
@@ -153,8 +154,14 @@ export async function POST(req: NextRequest) {
   );
   const nichoAlvo = normalizeText(campaign.nicho);
   const cidadeAlvo = normalizeText(campaign.cidade);
+  // só leads DESTE vendedor entram na fila dele
   const [{ data: candidatos }, { data: jaContactados }] = await Promise.all([
-    client.from("leads").select("*").eq("stage", "novo").order("score", { ascending: false }),
+    client
+      .from("leads")
+      .select("*")
+      .eq("stage", "novo")
+      .eq("vendedor_id", me.id)
+      .order("score", { ascending: false }),
     client.from("contacted_phones").select("telefone"),
   ]);
   // números que já receberam mensagem alguma vez NUNCA voltam para a fila,
@@ -172,7 +179,11 @@ export async function POST(req: NextRequest) {
 
   if (!leads || leads.length === 0) {
     return NextResponse.json(
-      { error: "Nenhum lead com estágio 'Novo' para esse nicho/cidade. Capte leads primeiro." },
+      {
+        error:
+          "Nenhum lead 'Novo' seu para esse nicho/cidade. " +
+          "Peça ao admin para distribuir leads na sua carteira.",
+      },
       { status: 422 }
     );
   }
@@ -181,6 +192,7 @@ export async function POST(req: NextRequest) {
   const { data: session, error: sessErr } = await client
     .from("dispatch_sessions")
     .insert({
+      vendedor_id: me.id,
       campaign_id,
       chip_id: chip.id,
       tipo: sessionType,
@@ -192,11 +204,11 @@ export async function POST(req: NextRequest) {
     .single();
   if (sessErr) return NextResponse.json({ error: sessErr.message }, { status: 500 });
 
-  // gera mensagens únicas e monta a fila
+  // gera mensagens únicas e monta a fila ({vendedor_nome} = nome do vendedor logado)
   const usedHashes = new Set<string>();
   const items = (leads as Lead[]).map((lead, i) => {
     const template = templates[i % templates.length];
-    const { mensagem, hash } = generateUniqueMessage(template, lead, usedHashes);
+    const { mensagem, hash } = generateUniqueMessage(template, lead, usedHashes, 10, me.nome);
     usedHashes.add(hash);
     return {
       session_id: session.id,
@@ -227,6 +239,7 @@ export async function POST(req: NextRequest) {
         campaign_id,
         template_id: it.template_id,
         chip_id: chip.id,
+        vendedor_id: me.id,
         evento: "gerada",
         texto: it.mensagem,
       };
@@ -234,4 +247,4 @@ export async function POST(req: NextRequest) {
   );
 
   return NextResponse.json({ session, queue: (queue ?? []).sort((a: any, b: any) => a.posicao - b.posicao) });
-}
+});

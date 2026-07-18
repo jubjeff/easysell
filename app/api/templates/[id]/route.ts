@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/auth";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = withJsonError(async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  await requireAdmin();
   const body = await req.json();
   const patch: Record<string, unknown> = {};
   for (const k of ["nome", "corpo", "social_proof", "ativo"]) {
@@ -17,9 +23,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ template: data });
-}
+});
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = withJsonError(async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  await requireAdmin();
   const { error } = await db().from("templates").delete().eq("id", params.id);
   if (error) {
     return NextResponse.json(
@@ -28,4 +38,4 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     );
   }
   return NextResponse.json({ ok: true });
-}
+});

@@ -20,8 +20,43 @@ export type MsgEvent =
   | "numero_invalido"
   | "pulado";
 
+export type Role = "admin" | "vendedor";
+export type CommissionStatus = "a_pagar" | "pago";
+
+export interface Profile {
+  id: string;
+  nome: string;
+  role: Role;
+  whatsapp_numero: string | null;
+  comissao_percentual: number;
+  ativo: boolean;
+  created_at: string;
+}
+
+export interface CommissionRule {
+  id: string;
+  vendedor_id: string | null; // null = regra padrão
+  valor_min: number;
+  valor_max: number | null;
+  percentual: number;
+  created_at: string;
+}
+
+export interface Commission {
+  id: string;
+  lead_id: string;
+  vendedor_id: string;
+  valor_venda: number;
+  percentual: number;
+  valor_comissao: number;
+  status: CommissionStatus;
+  fechado_em: string;
+  pago_em: string | null;
+}
+
 export interface Lead {
   id: string;
+  vendedor_id: string | null;
   google_place_id: string | null;
   nome: string;
   telefone: string;
@@ -38,6 +73,7 @@ export interface Lead {
   stage_changed_at: string;
   demo_url: string | null;
   valor_proposto: number | null;
+  valor_venda: number | null;
   plano: string | null;
   motivo_perda: string | null;
   created_at: string;
@@ -73,6 +109,7 @@ export interface Campaign {
 
 export interface DispatchSession {
   id: string;
+  vendedor_id: string | null;
   campaign_id: string;
   chip_id: string;
   tipo: SessionType;
@@ -86,6 +123,7 @@ export interface DispatchSession {
 
 export interface Chip {
   id: string;
+  vendedor_id: string | null;
   nome: string;
   telefone: string | null;
   ativado_em: string;
@@ -131,6 +169,7 @@ export interface QueueItem {
 
 export interface Settings {
   id: number;
+  vendedor_id: string | null;
   janela_inicio: string;
   janela_fim: string;
   dias_uteis: number[];

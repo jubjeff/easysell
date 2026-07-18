@@ -1,16 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { chipPreset, sentCounts } from "@/lib/limits";
+import { requireUser, scopeFilter } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-/** GET: lista chips com preset/idade e contagem de envios já calculados. */
+/** GET: chips do vendedor logado (admin vê todos), com preset/idade e envios. */
 export const GET = withJsonError(async function GET() {
-  const { data, error } = await db()
-    .from("chips")
-    .select("*")
-    .order("created_at", { ascending: true });
+  const me = await requireUser();
+  const scope = scopeFilter(me);
+  let q = db().from("chips").select("*").order("created_at", { ascending: true });
+  if (scope) q = q.eq("vendedor_id", scope);
+  const { data, error } = await q;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const chips = await Promise.all(
@@ -24,6 +26,7 @@ export const GET = withJsonError(async function GET() {
 });
 
 export const POST = withJsonError(async function POST(req: NextRequest) {
+  const me = await requireUser();
   const { nome, telefone, ativado_em, limite_diario_override, maturando } = await req.json();
   if (!nome?.trim() || !ativado_em) {
     return NextResponse.json(
@@ -34,6 +37,7 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
   const { data, error } = await db()
     .from("chips")
     .insert({
+      vendedor_id: me.id,
       nome: nome.trim(),
       telefone: telefone || null,
       ativado_em,

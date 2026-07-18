@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
+import { requireUser, requireAdmin } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withJsonError(async function GET() {
+  await requireUser();
   const { data, error } = await db()
     .from("templates")
     .select("*")
@@ -13,7 +15,8 @@ export const GET = withJsonError(async function GET() {
   return NextResponse.json({ templates: data });
 });
 
-export async function POST(req: NextRequest) {
+export const POST = withJsonError(async function POST(req: NextRequest) {
+  await requireAdmin();
   const { nome, corpo, social_proof } = await req.json();
   if (!nome?.trim() || !corpo?.trim()) {
     return NextResponse.json({ error: "Nome e corpo são obrigatórios." }, { status: 400 });
@@ -25,4 +28,4 @@ export async function POST(req: NextRequest) {
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ template: data });
-}
+});

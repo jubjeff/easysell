@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/auth";
+import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export const PATCH = withJsonError(async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  await requireAdmin();
   const body = await req.json();
   const client = db();
   const patch: Record<string, unknown> = {};
@@ -28,9 +34,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
   }
   return NextResponse.json({ ok: true });
-}
+});
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export const DELETE = withJsonError(async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  await requireAdmin();
   const { error } = await db().from("campaigns").delete().eq("id", params.id);
   if (error) {
     return NextResponse.json(
@@ -39,4 +49,4 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
     );
   }
   return NextResponse.json({ ok: true });
-}
+});

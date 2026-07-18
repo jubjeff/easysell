@@ -2,28 +2,42 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { normalizePhone } from "@/lib/phone";
 import { classifyWebsite, computeScore } from "@/lib/score";
+import { requireUser, requireAdmin, scopeFilter } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
-/** GET: lista leads com filtros ?stage=&nicho=&cidade=&q= */
+/**
+ * GET: lista leads com filtros ?stage=&nicho=&cidade=&q=&vendedor=
+ * Vendedor vê só a própria carteira; admin vê todos (e pode filtrar por vendedor).
+ */
 export const GET = withJsonError(async function GET(req: NextRequest) {
+  const me = await requireUser();
+  const scope = scopeFilter(me);
   const sp = req.nextUrl.searchParams;
   let q = db().from("leads").select("*").order("score", { ascending: false });
+  if (scope) {
+    q = q.eq("vendedor_id", scope);
+  } else if (sp.get("vendedor")) {
+    // admin filtrando por um vendedor específico ("nao_atribuido" = sem dono)
+    const v = sp.get("vendedor")!;
+    q = v === "nao_atribuido" ? q.is("vendedor_id", null) : q.eq("vendedor_id", v);
+  }
   if (sp.get("stage")) q = q.eq("stage", sp.get("stage"));
   if (sp.get("nicho")) q = q.eq("nicho", sp.get("nicho"));
   if (sp.get("cidade")) q = q.eq("cidade", sp.get("cidade"));
   if (sp.get("q")) q = q.ilike("nome", `%${sp.get("q")}%`);
-  const { data, error } = await q.limit(500);
+  const { data, error } = await q.limit(1000);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ leads: data });
 });
 
 /**
- * POST: insere leads em lote (vindos do Places ou CSV), com dedupe por
- * telefone e google_place_id. body: { leads: [...], source }
+ * POST: importa leads em lote (Places/CSV) — admin only. Entram NÃO atribuídos
+ * (vendedor_id null); o admin distribui depois. Dedupe por telefone e place_id.
  */
-export async function POST(req: NextRequest) {
+export const POST = withJsonError(async function POST(req: NextRequest) {
+  await requireAdmin();
   const body = await req.json();
   const source = body.source ?? "manual";
   const raw: any[] = body.leads ?? [];
@@ -103,4 +117,4 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ inserted, duplicated, invalid: invalidos.length, invalidos });
-}
+});

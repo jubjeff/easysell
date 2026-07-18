@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
+import { requireUser, requireAdmin } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
 
 export const dynamic = "force-dynamic";
 
 export const GET = withJsonError(async function GET() {
+  await requireUser();
   const { data, error } = await db()
     .from("campaigns")
     .select("*, campaign_templates(template_id, templates(nome))")
@@ -13,7 +15,8 @@ export const GET = withJsonError(async function GET() {
   return NextResponse.json({ campaigns: data });
 });
 
-export async function POST(req: NextRequest) {
+export const POST = withJsonError(async function POST(req: NextRequest) {
+  await requireAdmin();
   const { nome, nicho, cidade, limite_diario, limiar_taxa_resposta, template_ids } =
     await req.json();
   if (!nome?.trim() || !nicho?.trim() || !cidade?.trim()) {
@@ -39,4 +42,4 @@ export async function POST(req: NextRequest) {
       .insert(template_ids.map((template_id: string) => ({ campaign_id: campaign.id, template_id })));
   }
   return NextResponse.json({ campaign });
-}
+});
