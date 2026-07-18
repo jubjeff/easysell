@@ -26,9 +26,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-zinc-950 px-4">
-      <form onSubmit={submit} className="card w-full max-w-sm space-y-4">
-        <h1 className="text-lg font-bold text-emerald-400">EasySell</h1>
+    <div className="fixed inset-0 flex items-center justify-center bg-navy-950 px-4">
+      <form onSubmit={submit} className="card-line w-full max-w-sm space-y-4">
+        <div className="text-center mb-1">
+          <span className="font-mono text-2xl font-semibold">
+            <span className="text-lima">&lt;</span>
+            <span className="text-paper">Tégui</span>
+            <span className="text-lima"> /&gt;</span>
+          </span>
+          <p className="font-mono text-[10px] tracking-wide text-dim/70 mt-0.5">
+            powered by EasySell
+          </p>
+        </div>
         <div>
           <label className="label">E-mail</label>
           <input
