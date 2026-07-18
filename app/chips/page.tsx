@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { maskPhoneBr, formatPhone } from "@/lib/phone";
 
 export default function ChipsPage() {
   const [chips, setChips] = useState<any[]>([]);
@@ -82,9 +83,10 @@ export default function ChipsPage() {
             <div>
               <label className="label">Telefone (opcional)</label>
               <input
-                className="input"
-                value={editing.telefone}
-                onChange={(e) => setEditing({ ...editing, telefone: e.target.value })}
+                className="input data"
+                inputMode="tel"
+                value={editing.telefone ?? ""}
+                onChange={(e) => setEditing({ ...editing, telefone: maskPhoneBr(e.target.value) })}
                 placeholder="(81) 99999-9999"
               />
             </div>
@@ -154,7 +156,9 @@ export default function ChipsPage() {
                 )}
               </h2>
               <p className="text-sm text-zinc-400">
-                {c.telefone ? `${c.telefone} · ` : ""}
+                {c.telefone ? (
+                  <span className="data">{formatPhone(c.telefone)} · </span>
+                ) : null}
                 {c.preset.fase} · {c.preset.idadeDias} dias
               </p>
             </div>

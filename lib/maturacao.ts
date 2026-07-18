@@ -1,4 +1,5 @@
 import { Chip, MaturationDay, Settings } from "./types";
+import { mesmoDiaBr } from "./tz";
 
 /**
  * Cronograma de maturação em 4 fases (tabela de configuração — ajuste aqui,
@@ -118,14 +119,6 @@ export interface MaturationState {
   liberavel: boolean;
 }
 
-function mesmaDataLocal(a: Date, b: Date): boolean {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
-}
-
 export function maturationState(
   chip: Chip,
   days: MaturationDay[],
@@ -168,7 +161,7 @@ export function maturationState(
   const liberavel = criterios.every((c) => c.ok);
 
   const hoje = new Date();
-  const registrouHoje = days.some((d) => mesmaDataLocal(new Date(d.created_at), hoje));
+  const registrouHoje = days.some((d) => mesmoDiaBr(new Date(d.created_at), hoje));
 
   return {
     diasValidos,

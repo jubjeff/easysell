@@ -27,10 +27,15 @@ const bottomHrefs = ["/", "/sessao", "/funil", "/comissoes"];
 
 function Brand({ small = false }: { small?: boolean }) {
   return (
-    <span className={`font-mono font-semibold ${small ? "text-base" : "text-lg"}`}>
-      <span className="text-lima">&lt;</span>
-      <span className="text-paper">Tégui</span>
-      <span className="text-lima"> /&gt;</span>
+    <span className={`inline-flex flex-col ${small ? "items-center" : "items-start"}`}>
+      <span className={`font-mono font-semibold leading-tight ${small ? "text-base" : "text-lg"}`}>
+        <span className="text-lima">&lt;</span>
+        <span className="text-paper">Tégui</span>
+        <span className="text-lima"> /&gt;</span>
+      </span>
+      <span className="font-mono text-[9px] tracking-wide text-dim/70">
+        powered by EasySell
+      </span>
     </span>
   );
 }

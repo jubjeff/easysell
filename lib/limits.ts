@@ -1,4 +1,5 @@
 import { db } from "./supabase";
+import { nowBr, startOfDayBr } from "./tz";
 import { Chip, Settings, SessionType } from "./types";
 
 /** Preset de limite diário pela idade do chip. */
@@ -8,7 +9,7 @@ export function chipPreset(ativadoEm: string): {
   limite: number;
 } {
   const idadeDias = Math.floor(
-    (Date.now() - new Date(ativadoEm + "T00:00:00").getTime()) / 86400000
+    (Date.now() - new Date(ativadoEm + "T00:00:00-03:00").getTime()) / 86400000
   );
   if (idadeDias < 30) return { idadeDias, fase: "Chip novo (< 30 dias)", limite: 15 };
   if (idadeDias <= 90) return { idadeDias, fase: "Chip aquecido (30–90 dias)", limite: 40 };
@@ -51,10 +52,12 @@ export function effectiveDailyLimit(chip: Chip, tipo: SessionType, settings: Set
 
 /** Envios de hoje e da semana (evento 'enviado' no log) de um chip específico. */
 export async function sentCounts(chipId: string): Promise<{ hoje: number; semana: number }> {
-  const now = new Date();
-  const startDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startWeek = new Date(startDay);
-  startWeek.setDate(startWeek.getDate() - ((startWeek.getDay() + 6) % 7)); // segunda
+  // dia/semana no calendário BRASILEIRO (servidor roda em UTC)
+  const br = nowBr();
+  const startDay = startOfDayBr(br);
+  const startWeek = new Date(
+    startDay.getTime() - ((br.getUTCDay() + 6) % 7) * 86400000 // segunda
+  );
 
   const client = db();
   const [today, week] = await Promise.all([
@@ -74,13 +77,14 @@ export async function sentCounts(chipId: string): Promise<{ hoje: number; semana
   return { hoje: today.count ?? 0, semana: week.count ?? 0 };
 }
 
-/** Verifica se agora está dentro da janela de envio configurada. */
+/** Verifica se agora está dentro da janela de envio configurada (horário de Brasília). */
 export function inSendWindow(s: Settings, now = new Date()): { ok: boolean; motivo?: string } {
-  const isoDay = now.getDay() === 0 ? 7 : now.getDay(); // ISO: 1=seg ... 7=dom
+  const br = nowBr(now);
+  const isoDay = br.getUTCDay() === 0 ? 7 : br.getUTCDay(); // ISO: 1=seg ... 7=dom
   if (!s.dias_uteis.includes(isoDay)) {
     return { ok: false, motivo: "Hoje não é um dia de envio configurado." };
   }
-  const hm = now.getHours() * 60 + now.getMinutes();
+  const hm = br.getUTCHours() * 60 + br.getUTCMinutes();
   const [hi, mi] = s.janela_inicio.split(":").map(Number);
   const [hf, mf] = s.janela_fim.split(":").map(Number);
   if (hm < hi * 60 + mi || hm >= hf * 60 + mf) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { maskPhoneBr, formatPhone } from "@/lib/phone";
 
 export default function VendedoresPage() {
   const [lista, setLista] = useState<any[]>([]);
@@ -136,9 +137,12 @@ export default function VendedoresPage() {
             <div>
               <label className="label">WhatsApp (número que dispara)</label>
               <input
-                className="input"
+                className="input data"
+                inputMode="tel"
                 value={editing.whatsapp_numero ?? ""}
-                onChange={(e) => setEditing({ ...editing, whatsapp_numero: e.target.value })}
+                onChange={(e) =>
+                  setEditing({ ...editing, whatsapp_numero: maskPhoneBr(e.target.value) })
+                }
                 placeholder="(81) 99999-9999"
               />
             </div>
@@ -181,7 +185,9 @@ export default function VendedoresPage() {
                 {!v.ativo && <span className="ml-2 badge bg-zinc-800 text-zinc-400">inativo</span>}
               </h2>
               <p className="text-sm text-zinc-400">
-                {v.whatsapp_numero ? `${v.whatsapp_numero} · ` : ""}
+                {v.whatsapp_numero ? (
+                  <span className="data">{formatPhone(v.whatsapp_numero)} · </span>
+                ) : null}
                 comissão padrão {v.comissao_percentual}%
               </p>
             </div>

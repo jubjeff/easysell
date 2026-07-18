@@ -16,7 +16,7 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tégui",
+  title: "Tégui - Facilitador de vendas",
   description: "Prospecção e vendas de landing pages",
 };
 

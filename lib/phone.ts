@@ -29,6 +29,22 @@ export function formatPhone(e164: string): string {
   return e164;
 }
 
+/**
+ * Máscara progressiva para input de telefone BR: formata enquanto digita.
+ * (81 → (81)  → (81) 9999 → (81) 9999-9999 → (81) 99999-9999
+ */
+export function maskPhoneBr(raw: string): string {
+  const d = raw
+    .replace(/\D/g, "")
+    .replace(/^55(?=\d{10,11}$)/, "")
+    .slice(0, 11);
+  if (d.length === 0) return "";
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
 /** Link wa.me — só dígitos, sem '+' */
 export function waLink(e164: string, text?: string): string {
   const num = e164.replace(/\D/g, "");
