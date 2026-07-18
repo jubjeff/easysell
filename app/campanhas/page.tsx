@@ -71,12 +71,15 @@ export default function CampanhasPage() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Campanhas</h1>
+        <div>
+          <span className="tag-state text-dim">campanhas</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">Campanhas</h1>
+        </div>
         <button className="btn-primary" onClick={novo}>
           + Nova campanha
         </button>
       </div>
-      {msg && <p className="card border-red-900 text-red-300 text-sm">{msg}</p>}
+      {msg && <p className="card-line !border-red-900/70 text-red-300 text-sm">{msg}</p>}
 
       {editing && (
         <div className="card space-y-3 border-emerald-800">

@@ -81,20 +81,23 @@ export default function VendedoresPage() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Vendedores</h1>
+        <div>
+          <span className="tag-state text-dim">vendedores</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">Equipe</h1>
+        </div>
         <div className="flex items-center gap-3">
-          {msg && <span className="text-sm text-emerald-400">✓ {msg}</span>}
+          {msg && <span className="font-mono text-xs text-lima">✓ {msg}</span>}
           <button className="btn-primary" onClick={novo}>
             + Novo vendedor
           </button>
         </div>
       </div>
-      {erro && <p className="card border-red-900 text-red-300 text-sm">{erro}</p>}
+      {erro && <p className="card-line !border-red-900/70 text-red-300 text-sm">{erro}</p>}
 
       {editing && (
-        <div className="card space-y-3 border-emerald-800">
-          <h2 className="text-sm font-bold text-zinc-300">
-            {editing.novo ? "Novo vendedor" : `Editar ${editing.nome}`}
+        <div className="card-line space-y-3 !border-lima/40">
+          <h2 className="tag-state text-dim">
+            {editing.novo ? "novo_vendedor" : `editar · ${editing.nome}`}
           </h2>
           <div className="grid md:grid-cols-2 gap-3">
             <div>

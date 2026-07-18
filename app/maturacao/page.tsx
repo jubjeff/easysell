@@ -112,8 +112,11 @@ export default function MaturacaoPage() {
 
   return (
     <div className="space-y-5 max-w-3xl">
-      <h1 className="text-xl font-bold">🌱 Maturação de chips</h1>
-      {erro && <p className="card border-red-900 text-red-300 text-sm">{erro}</p>}
+      <div>
+        <span className="tag-state text-dim">maturação</span>
+        <h1 className="text-2xl font-bold tracking-tight mt-1">🌱 Aquecimento de chips</h1>
+      </div>
+      {erro && <p className="card-line !border-red-900/70 text-red-300 text-sm">{erro}</p>}
       {avisos.map((a, i) => (
         <p key={i} className="card border-amber-800 bg-amber-950/30 text-amber-200 text-sm">
           ⚠️ {a}

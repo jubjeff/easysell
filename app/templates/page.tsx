@@ -58,7 +58,10 @@ export default function TemplatesPage() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Templates</h1>
+        <div>
+          <span className="tag-state text-dim">templates</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">Templates</h1>
+        </div>
         <button
           className="btn-primary"
           onClick={() => setEditing({ nome: "", corpo: "", social_proof: "" })}

@@ -61,15 +61,18 @@ export default function ChipsPage() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Chips</h1>
+        <div>
+          <span className="tag-state text-dim">chips</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">Meus chips</h1>
+        </div>
         <button className="btn-primary" onClick={novo}>
           + Novo chip
         </button>
       </div>
-      {msg && <p className="card border-red-900 text-red-300 text-sm">{msg}</p>}
+      {msg && <p className="card-line !border-red-900/70 text-red-300 text-sm">{msg}</p>}
 
       {editing && (
-        <div className="card space-y-3 border-emerald-800">
+        <div className="card-line space-y-3 !border-lima/40">
           <div className="grid md:grid-cols-2 gap-3">
             <div>
               <label className="label">Nome / apelido</label>
@@ -171,11 +174,12 @@ export default function ChipsPage() {
               </button>
             </div>
           </div>
-          <p className="text-xs text-zinc-500 mt-2">
-            Hoje: <b className="text-emerald-400">{c.hoje}</b> / {c.limite_diario_override ?? c.preset.limite}
-            {" · "}Semana: {c.semana}
+          <p className="font-mono text-[11px] text-dim mt-2">
+            hoje <b className="data text-lima">{c.hoje}</b>/
+            {c.limite_diario_override ?? c.preset.limite} · semana{" "}
+            <span className="data">{c.semana}</span>
             {c.limite_diario_override != null && (
-              <span> · limite manual: {c.limite_diario_override}/dia</span>
+              <span> · limite manual {c.limite_diario_override}/dia</span>
             )}
           </p>
         </div>

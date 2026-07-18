@@ -52,8 +52,11 @@ export default function ConfigPage() {
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Configurações</h1>
-        {saved && <span className="text-sm text-emerald-400">✓ salvo</span>}
+        <div>
+          <span className="tag-state text-dim">configurações</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">Ajustes</h1>
+        </div>
+        {saved && <span className="font-mono text-xs text-lima">✓ salvo</span>}
       </div>
 
       {/* aquecimento */}

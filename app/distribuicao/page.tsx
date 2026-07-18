@@ -98,23 +98,31 @@ export default function DistribuicaoPage() {
   }
 
   if (me && me.role !== "admin") {
-    return <p className="card text-sm text-zinc-400">Esta área é exclusiva do administrador.</p>;
+    return (
+      <p className="card text-sm text-dim">Esta área é exclusiva do administrador.</p>
+    );
   }
+
+  const vendedoresAtivos = vendedores.filter((v) => v.ativo);
+  const todosMarcados = sel.size === naoAtribuidos.length && naoAtribuidos.length > 0;
 
   return (
     <div className="space-y-5 max-w-4xl">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">Distribuição de leads</h1>
-        {msg && <span className="text-sm text-emerald-400">✓ {msg}</span>}
+        <div>
+          <span className="tag-state text-dim">distribuição</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">Distribuir leads</h1>
+        </div>
+        {msg && <span className="font-mono text-xs text-lima">✓ {msg}</span>}
       </div>
-      {erro && <p className="card border-red-900 text-red-300 text-sm">{erro}</p>}
+      {erro && <p className="card-line !border-red-900/70 text-red-300 text-sm">{erro}</p>}
 
       {/* carteira de cada vendedor */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {vendedores.map((v) => (
           <div key={v.id} className="card text-center py-3">
-            <div className="text-2xl font-bold text-emerald-400">{v.carteira}</div>
-            <div className="text-xs text-zinc-400">
+            <div className="data text-2xl font-semibold text-lima">{v.carteira}</div>
+            <div className="font-mono text-[11px] text-dim mt-0.5">
               {v.nome}
               {!v.ativo && " (inativo)"}
             </div>
@@ -135,27 +143,32 @@ export default function DistribuicaoPage() {
       </div>
 
       {/* rodízio automático */}
-      <div className="card space-y-3 border-zinc-700">
-        <h2 className="text-sm font-bold text-zinc-300">Rodízio automático (round-robin)</h2>
-        <p className="text-xs text-zinc-500">
-          Distribui os não atribuídos (respeitando o filtro acima) igualmente entre os vendedores marcados.
+      <div className="card-line space-y-3">
+        <h2 className="tag-state text-dim">rodízio_automático</h2>
+        <p className="text-xs text-dim">
+          Distribui os não atribuídos (respeitando o filtro acima) igualmente entre os vendedores
+          marcados.
         </p>
         <div className="flex flex-wrap gap-2">
-          {vendedores.filter((v) => v.ativo).map((v) => (
+          {vendedoresAtivos.map((v) => (
             <button
               key={v.id}
               onClick={() => toggleAuto(v.id)}
-              className={`badge cursor-pointer border px-3 py-1.5 ${
+              className={`rounded-full px-3 py-1.5 text-xs font-medium border transition-colors ${
                 autoSel.has(v.id)
-                  ? "bg-emerald-900/60 text-emerald-300 border-emerald-700"
-                  : "bg-zinc-800 text-zinc-400 border-zinc-700"
+                  ? "bg-lima text-navy-950 border-lima"
+                  : "bg-navy-900 text-dim border-navy-700 hover:text-paper"
               }`}
             >
               {v.nome}
             </button>
           ))}
         </div>
-        <button className="btn-secondary" onClick={auto} disabled={autoSel.size === 0 || naoAtribuidos.length === 0}>
+        <button
+          className="btn-secondary"
+          onClick={auto}
+          disabled={autoSel.size === 0 || naoAtribuidos.length === 0}
+        >
           🔀 Distribuir {naoAtribuidos.length} lead(s) por rodízio
         </button>
       </div>
@@ -163,13 +176,13 @@ export default function DistribuicaoPage() {
       {/* atribuição manual */}
       <div className="card space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-zinc-300">
-            Não atribuídos ({naoAtribuidos.length})
+          <h2 className="tag-state text-dim">
+            não_atribuídos · {naoAtribuidos.length}
           </h2>
           <div className="flex items-center gap-2">
             <select className="input !w-auto" value={alvo} onChange={(e) => setAlvo(e.target.value)}>
               <option value="">Atribuir a…</option>
-              {vendedores.filter((v) => v.ativo).map((v) => (
+              {vendedoresAtivos.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.nome}
                 </option>
@@ -182,46 +195,77 @@ export default function DistribuicaoPage() {
         </div>
 
         {naoAtribuidos.length === 0 ? (
-          <p className="text-sm text-zinc-500">Nenhum lead não atribuído. 🎉</p>
+          <p className="font-mono text-sm text-dim py-4 text-center">
+            tudo distribuído · nenhum lead sem dono 🎉
+          </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-zinc-500 border-b border-zinc-800">
-                  <th className="py-2 pr-2">
-                    <input
-                      type="checkbox"
-                      checked={sel.size === naoAtribuidos.length && naoAtribuidos.length > 0}
-                      onChange={toggleTodos}
-                    />
-                  </th>
-                  <th className="py-2 pr-2">Nome</th>
-                  <th className="py-2 pr-2">Cidade</th>
-                  <th className="py-2 pr-2">Nicho</th>
-                  <th className="py-2 pr-2">Telefone</th>
-                  <th className="py-2 pr-2 text-right">Score</th>
-                </tr>
-              </thead>
-              <tbody>
-                {naoAtribuidos.map((l) => (
-                  <tr
-                    key={l.id}
-                    className="border-b border-zinc-800/50 hover:bg-zinc-800/30 cursor-pointer"
-                    onClick={() => toggle(l.id)}
-                  >
-                    <td className="py-1.5 pr-2">
-                      <input type="checkbox" checked={sel.has(l.id)} onChange={() => toggle(l.id)} />
-                    </td>
-                    <td className="py-1.5 pr-2">{l.nome}</td>
-                    <td className="py-1.5 pr-2 text-zinc-400">{l.cidade}</td>
-                    <td className="py-1.5 pr-2 text-zinc-400">{l.nicho}</td>
-                    <td className="py-1.5 pr-2 text-zinc-400">{formatPhone(l.telefone)}</td>
-                    <td className="py-1.5 pr-2 text-right text-emerald-400">{l.score}</td>
+          <>
+            <label className="flex items-center gap-2 font-mono text-[11px] text-dim">
+              <input type="checkbox" checked={todosMarcados} onChange={toggleTodos} />
+              selecionar todos
+            </label>
+
+            {/* desktop: tabela */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="font-mono text-[10px] uppercase tracking-wider text-dim text-left">
+                  <tr className="border-b border-navy-800">
+                    <th className="py-2 pr-2 w-8"></th>
+                    <th className="py-2 pr-2">Nome</th>
+                    <th className="py-2 pr-2">Cidade</th>
+                    <th className="py-2 pr-2">Nicho</th>
+                    <th className="py-2 pr-2">Telefone</th>
+                    <th className="py-2 pr-2 text-right">Score</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {naoAtribuidos.map((l) => (
+                    <tr
+                      key={l.id}
+                      className="border-b border-navy-800/50 hover:bg-navy-800/40 cursor-pointer"
+                      onClick={() => toggle(l.id)}
+                    >
+                      <td className="py-2 pr-2">
+                        <input type="checkbox" checked={sel.has(l.id)} onChange={() => toggle(l.id)} />
+                      </td>
+                      <td className="py-2 pr-2 font-medium">{l.nome}</td>
+                      <td className="py-2 pr-2 text-dim">{l.cidade}</td>
+                      <td className="py-2 pr-2 text-dim">{l.nicho}</td>
+                      <td className="py-2 pr-2 data text-dim">{formatPhone(l.telefone)}</td>
+                      <td className="py-2 pr-2 text-right data text-paper">{l.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* mobile: cards */}
+            <div className="md:hidden space-y-2">
+              {naoAtribuidos.map((l) => (
+                <label
+                  key={l.id}
+                  className="flex items-start gap-3 rounded-xl bg-navy-800/60 p-3"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={sel.has(l.id)}
+                    onChange={() => toggle(l.id)}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="font-medium text-sm leading-snug">{l.nome}</span>
+                      <span className="data text-[11px] text-dim shrink-0">{l.score}</span>
+                    </div>
+                    <p className="font-mono text-[11px] text-dim mt-0.5">
+                      {l.nicho} · {l.cidade}
+                    </p>
+                    <p className="data text-[11px] text-dim/70">{formatPhone(l.telefone)}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

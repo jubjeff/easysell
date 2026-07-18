@@ -50,10 +50,11 @@ export default function LeadPage() {
     <div className="max-w-3xl space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">{lead.nome}</h1>
-          <p className="text-sm text-zinc-400">
-            {lead.cidade} · {lead.nicho} · {formatPhone(lead.telefone)}
-            {lead.rating ? ` · ${lead.rating}⭐ (${lead.qtd_avaliacoes})` : ""}
+          <span className="tag-state text-dim">lead</span>
+          <h1 className="text-2xl font-bold tracking-tight mt-1">{lead.nome}</h1>
+          <p className="font-mono text-[11px] text-dim mt-1">
+            {lead.nicho} · {lead.cidade} · <span className="data">{formatPhone(lead.telefone)}</span>
+            {lead.rating ? ` · ${lead.rating}★ (${lead.qtd_avaliacoes})` : ""}
           </p>
         </div>
         <div className="flex gap-2">
