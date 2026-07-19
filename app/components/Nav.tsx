@@ -15,6 +15,7 @@ const items: Item[] = [
   { href: "/captacao", label: "Captação", icon: "🔎", adminOnly: true },
   { href: "/distribuicao", label: "Distribuição", icon: "🗂️", adminOnly: true },
   { href: "/funil", label: "Funil", icon: "📋" },
+  { href: "/demos", label: "Demos", icon: "🖼️" },
   { href: "/comissoes", label: "Comissões", icon: "💰" },
   { href: "/campanhas", label: "Campanhas", icon: "🎯", adminOnly: true },
   { href: "/templates", label: "Templates", icon: "✉️", adminOnly: true },

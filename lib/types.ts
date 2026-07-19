@@ -22,6 +22,7 @@ export type MsgEvent =
 
 export type Role = "admin" | "vendedor";
 export type CommissionStatus = "a_pagar" | "pago";
+export type ThumbStatus = "pending" | "ready" | "failed";
 
 export interface Profile {
   id: string;
@@ -95,6 +96,23 @@ export interface Template {
   social_proof: string | null;
   variante: string | null;
   ativo: boolean;
+  created_at: string;
+}
+
+export interface Demo {
+  id: string;
+  nicho: string;
+  url: string;
+  script_padrao: string;
+  ativo: boolean;
+  ordem: number;
+  contador_copias: number;
+  thumbnail_url: string | null;
+  thumbnail_status: ThumbStatus;
+  thumbnail_updated_at: string | null;
+  criado_por: string | null;
+  editado_por: string | null;
+  atualizado_em: string;
   created_at: string;
 }
 

@@ -239,6 +239,14 @@ function Card({ lead: l }: { lead: any }) {
           <p className="data text-[11px] text-dim mt-1.5">proposta {BRL(l.valor_proposto)}</p>
         )
       )}
+      {/* atalho p/ a demo do nicho, já com {nome_negocio} pré-preenchido */}
+      <Link
+        href={`/demos?nicho=${encodeURIComponent(l.nicho)}&negocio=${encodeURIComponent(l.nome)}`}
+        onClick={(e) => e.stopPropagation()}
+        className="inline-flex items-center gap-1 mt-2 font-mono text-[10px] text-dim hover:text-lima transition-colors"
+      >
+        🖼️ ver demos
+      </Link>
     </>
   );
 }
