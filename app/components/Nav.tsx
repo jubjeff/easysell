@@ -6,22 +6,49 @@ import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
 type Item = { href: string; label: string; icon: string; adminOnly?: boolean };
+type Group = { label: string; items: Item[] };
 
-const items: Item[] = [
+/** Itens soltos no topo, sem rótulo de grupo — os dois destinos mais usados. */
+const topItems: Item[] = [
   { href: "/", label: "Dashboard", icon: "📊" },
   { href: "/sessao", label: "Sessão de disparo", icon: "🚀" },
-  { href: "/chips", label: "Chips", icon: "📱" },
-  { href: "/maturacao", label: "Maturação", icon: "🌱" },
-  { href: "/captacao", label: "Captação", icon: "🔎", adminOnly: true },
-  { href: "/distribuicao", label: "Distribuição", icon: "🗂️", adminOnly: true },
-  { href: "/funil", label: "Funil", icon: "📋" },
-  { href: "/demos", label: "Demos", icon: "🖼️" },
-  { href: "/comissoes", label: "Comissões", icon: "💰" },
-  { href: "/campanhas", label: "Campanhas", icon: "🎯", adminOnly: true },
-  { href: "/templates", label: "Templates", icon: "✉️", adminOnly: true },
-  { href: "/vendedores", label: "Vendedores", icon: "👥", adminOnly: true },
-  { href: "/config", label: "Configurações", icon: "⚙️" },
 ];
+
+/** Menu agrupado por função: operação do dia a dia, infra de números,
+ *  gestão (admin) e sistema. Grupo sem item visível some com o rótulo. */
+const groups: Group[] = [
+  {
+    label: "Operação",
+    items: [
+      { href: "/funil", label: "Funil", icon: "📋" },
+      { href: "/demos", label: "Demos", icon: "🖼️" },
+      { href: "/comissoes", label: "Comissões", icon: "💰" },
+    ],
+  },
+  {
+    label: "Números",
+    items: [
+      { href: "/chips", label: "Chips", icon: "📱" },
+      { href: "/maturacao", label: "Maturação", icon: "🌱" },
+    ],
+  },
+  {
+    label: "Gestão",
+    items: [
+      { href: "/captacao", label: "Captação", icon: "🔎", adminOnly: true },
+      { href: "/distribuicao", label: "Distribuição", icon: "🗂️", adminOnly: true },
+      { href: "/campanhas", label: "Campanhas", icon: "🎯", adminOnly: true },
+      { href: "/templates", label: "Templates", icon: "✉️", adminOnly: true },
+      { href: "/vendedores", label: "Vendedores", icon: "👥", adminOnly: true },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [{ href: "/config", label: "Configurações", icon: "⚙️" }],
+  },
+];
+
+const allItems: Item[] = [...topItems, ...groups.flatMap((g) => g.items)];
 
 /** Itens fixos da bottom nav mobile (o resto vive na aba "Mais"). */
 const bottomHrefs = ["/", "/sessao", "/funil", "/comissoes"];
@@ -61,9 +88,24 @@ export default function Nav() {
   if (pathname === "/login") return null;
 
   const isAdmin = me?.role === "admin";
-  const visible = items.filter((it) => !it.adminOnly || isAdmin);
+  const canSee = (it: Item) => !it.adminOnly || isAdmin;
+
+  // grupos com pelo menos 1 item visível para este papel
+  const visibleGroups = groups
+    .map((g) => ({ label: g.label, items: g.items.filter(canSee) }))
+    .filter((g) => g.items.length > 0);
+
+  const visible = allItems.filter(canSee);
   const bottomItems = visible.filter((it) => bottomHrefs.includes(it.href));
-  const maisItems = visible.filter((it) => !bottomHrefs.includes(it.href));
+  const isInBottom = (it: Item) => bottomHrefs.includes(it.href);
+
+  // itens soltos que sobram para o sheet "Mais" (fora da bottom nav)
+  const maisTop = topItems.filter((it) => canSee(it) && !isInBottom(it));
+
+  // grupos com os itens que sobram para o sheet "Mais" (fora da bottom nav)
+  const maisGroups = visibleGroups
+    .map((g) => ({ label: g.label, items: g.items.filter((it) => !isInBottom(it)) }))
+    .filter((g) => g.items.length > 0);
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -76,31 +118,60 @@ export default function Nav() {
 
   return (
     <>
-      {/* ===== desktop: sidebar ===== */}
+      {/* ===== desktop: sidebar agrupada ===== */}
       <aside className="hidden md:flex w-60 shrink-0 border-r border-navy-800 bg-navy-900/40 p-4 flex-col sticky top-0 h-screen">
         <div className="px-2 mb-6">
           <Brand />
         </div>
-        <nav className="flex flex-col gap-0.5">
-          {visible.map((it) => {
-            const active = isActive(it.href);
-            return (
-              <Link
-                key={it.href}
-                href={it.href}
-                className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
-                  active
-                    ? "bg-viola-faint text-paper font-medium"
-                    : "text-dim hover:text-paper hover:bg-navy-800/70"
-                }`}
-              >
-                {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-viola" />
-                )}
-                <span className="text-base leading-none">{it.icon}</span> {it.label}
-              </Link>
-            );
-          })}
+        <nav className="flex flex-col gap-4 overflow-y-auto">
+          {/* soltos, sem rótulo */}
+          <div className="flex flex-col gap-0.5">
+            {topItems.filter(canSee).map((it) => {
+              const active = isActive(it.href);
+              return (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
+                    active
+                      ? "bg-viola-faint text-paper font-medium"
+                      : "text-dim hover:text-paper hover:bg-navy-800/70"
+                  }`}
+                >
+                  {active && (
+                    <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-viola" />
+                  )}
+                  <span className="text-base leading-none">{it.icon}</span> {it.label}
+                </Link>
+              );
+            })}
+          </div>
+          {visibleGroups.map((g) => (
+            <div key={g.label} className="flex flex-col gap-0.5">
+              <span className="px-3 mb-1 font-mono text-[10px] uppercase tracking-wider text-dim/60">
+                {g.label}
+              </span>
+              {g.items.map((it) => {
+                const active = isActive(it.href);
+                return (
+                  <Link
+                    key={it.href}
+                    href={it.href}
+                    className={`relative flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-colors ${
+                      active
+                        ? "bg-viola-faint text-paper font-medium"
+                        : "text-dim hover:text-paper hover:bg-navy-800/70"
+                    }`}
+                  >
+                    {active && (
+                      <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-viola" />
+                    )}
+                    <span className="text-base leading-none">{it.icon}</span> {it.label}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
         </nav>
         <div className="mt-auto pt-4 border-t border-navy-800">
           {me && (
@@ -123,31 +194,55 @@ export default function Nav() {
         <Brand small />
       </div>
 
-      {/* ===== mobile: sheet "Mais" ===== */}
+      {/* ===== mobile: sheet "Mais" (também agrupado) ===== */}
       {maisAberto && (
         <div
           className="md:hidden fixed inset-0 z-40 bg-black/60"
           onClick={() => setMaisAberto(false)}
         >
           <div
-            className="absolute bottom-16 inset-x-2 rounded-2xl bg-navy-900 border border-navy-700 p-3 animate-settle-in"
+            className="absolute bottom-16 inset-x-2 rounded-2xl bg-navy-900 border border-navy-700 p-3 animate-settle-in max-h-[70vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="grid grid-cols-2 gap-1">
-              {maisItems.map((it) => (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm ${
-                    isActive(it.href)
-                      ? "bg-viola-faint text-paper font-medium"
-                      : "text-dim hover:text-paper hover:bg-navy-800"
-                  }`}
-                >
-                  <span>{it.icon}</span> {it.label}
-                </Link>
-              ))}
-            </div>
+            {maisTop.length > 0 && (
+              <div className="grid grid-cols-2 gap-1 mb-2">
+                {maisTop.map((it) => (
+                  <Link
+                    key={it.href}
+                    href={it.href}
+                    className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm ${
+                      isActive(it.href)
+                        ? "bg-viola-faint text-paper font-medium"
+                        : "text-dim hover:text-paper hover:bg-navy-800"
+                    }`}
+                  >
+                    <span>{it.icon}</span> {it.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+            {maisGroups.map((g) => (
+              <div key={g.label} className="mb-2 last:mb-0">
+                <span className="block px-1 mb-1 font-mono text-[10px] uppercase tracking-wider text-dim/60">
+                  {g.label}
+                </span>
+                <div className="grid grid-cols-2 gap-1">
+                  {g.items.map((it) => (
+                    <Link
+                      key={it.href}
+                      href={it.href}
+                      className={`flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm ${
+                        isActive(it.href)
+                          ? "bg-viola-faint text-paper font-medium"
+                          : "text-dim hover:text-paper hover:bg-navy-800"
+                      }`}
+                    >
+                      <span>{it.icon}</span> {it.label}
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
             <div className="mt-2 pt-2 border-t border-navy-800 flex items-center justify-between px-3">
               {me && (
                 <p className="font-mono text-[11px] text-dim truncate">
