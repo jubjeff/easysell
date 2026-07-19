@@ -26,7 +26,7 @@ export const GET = withJsonError(async function GET() {
 
   const { data: queue } = await client
     .from("queue_items")
-    .select("*, leads(*), templates(nome)")
+    .select("*, leads(*), templates(nome, variante)")
     .eq("session_id", session.id)
     .order("posicao");
 
@@ -143,6 +143,9 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
       { status: 422 }
     );
   }
+  // a fila inicial usa o Template A (padrão); o vendedor troca por B/C/aleatório no card
+  const templatePadrao =
+    templates.find((t) => t.variante === "A") ?? templates[0];
 
   // leads elegíveis: stage 'novo', nicho+cidade da campanha (comparação
   // tolerante a acento/caixa — "Maceió" e "Maceio" são o mesmo lugar),
@@ -207,7 +210,7 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
   // gera mensagens únicas e monta a fila ({vendedor_nome} = nome do vendedor logado)
   const usedHashes = new Set<string>();
   const items = (leads as Lead[]).map((lead, i) => {
-    const template = templates[i % templates.length];
+    const template = templatePadrao;
     const { mensagem, hash } = generateUniqueMessage(template, lead, usedHashes, 10, me.nome);
     usedHashes.add(hash);
     return {
@@ -223,7 +226,7 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
   const { data: queue, error: qErr } = await client
     .from("queue_items")
     .insert(items)
-    .select("*, leads(*), templates(nome)");
+    .select("*, leads(*), templates(nome, variante)");
   if (qErr) {
     await client.from("dispatch_sessions").delete().eq("id", session.id);
     return NextResponse.json({ error: qErr.message }, { status: 500 });

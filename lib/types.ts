@@ -59,6 +59,7 @@ export interface Lead {
   vendedor_id: string | null;
   google_place_id: string | null;
   nome: string;
+  primeiro_nome: string | null;
   telefone: string;
   endereco: string | null;
   cidade: string;
@@ -92,6 +93,7 @@ export interface Template {
   nome: string;
   corpo: string;
   social_proof: string | null;
+  variante: string | null;
   ativo: boolean;
   created_at: string;
 }

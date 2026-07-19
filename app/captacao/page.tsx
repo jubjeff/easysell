@@ -204,7 +204,9 @@ export default function CaptacaoPage() {
             <code className="font-mono text-paper/90">nome,telefone,cidade,nicho</code>
             <br />
             opcionais:{" "}
-            <code className="font-mono text-dim">endereco,rating,qtd_avaliacoes,website</code>
+            <code className="font-mono text-dim">
+              primeiro_nome,endereco,rating,qtd_avaliacoes,website
+            </code>
           </p>
           <label className="btn-secondary w-full cursor-pointer">
             📄 Escolher arquivo .csv

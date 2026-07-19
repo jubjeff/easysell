@@ -59,6 +59,7 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
     prepared.push({
       google_place_id: l.google_place_id ?? null,
       nome: String(l.nome).trim(),
+      primeiro_nome: l.primeiro_nome?.trim() || null,
       telefone,
       endereco: l.endereco ?? null,
       cidade: String(l.cidade).trim(),

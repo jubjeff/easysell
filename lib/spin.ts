@@ -12,33 +12,96 @@ export function resolveSpin(text: string): string {
   });
 }
 
-/** Preenche as variáveis do template com dados do lead e do vendedor. */
+/** Valor de uma variável para o lead. "" = ausente (dispara fallback). */
+function varValue(name: string, lead: Lead, vendedorNome = ""): string {
+  switch (name) {
+    case "nome_negocio":
+      return lead.nome ?? "";
+    case "primeiro_nome":
+      return (lead.primeiro_nome ?? "").trim();
+    case "cidade":
+      return lead.cidade ?? "";
+    case "nicho":
+      return lead.nicho ?? "";
+    case "rating":
+      return lead.rating != null ? String(lead.rating) : "";
+    case "qtd_avaliacoes":
+      return lead.qtd_avaliacoes ? String(lead.qtd_avaliacoes) : "";
+    case "vendedor_nome":
+      return vendedorNome ?? "";
+    default:
+      return "";
+  }
+}
+
+const KNOWN_VARS = [
+  "nome_negocio",
+  "primeiro_nome",
+  "cidade",
+  "nicho",
+  "rating",
+  "qtd_avaliacoes",
+  "vendedor_nome",
+];
+
+/** Blocos [[ ... ]] só sobrevivem se TODAS as variáveis internas existirem. */
+function resolveConditionalBlocks(text: string, lead: Lead, vendedorNome: string): string {
+  return text.replace(/\[\[([\s\S]*?)\]\]/g, (_, inner: string) => {
+    const vars = Array.from(inner.matchAll(/\{(\w+)\}/g)).map((m) => m[1]);
+    const todasPresentes = vars.every((v) => varValue(v, lead, vendedorNome) !== "");
+    return todasPresentes ? inner : "";
+  });
+}
+
+/** Preenche {var} conhecidas; deixa {a|b} (spintax) e {desconhecidas} intactas. */
 function fillVariables(text: string, lead: Lead, vendedorNome = ""): string {
-  return text
-    .replaceAll("{nome_negocio}", lead.nome)
-    .replaceAll("{cidade}", lead.cidade)
-    .replaceAll("{nicho}", lead.nicho)
-    .replaceAll("{rating}", lead.rating != null ? String(lead.rating) : "")
-    .replaceAll("{qtd_avaliacoes}", String(lead.qtd_avaliacoes ?? 0))
-    .replaceAll("{vendedor_nome}", vendedorNome);
+  return text.replace(/\{(\w+)\}/g, (m, name: string) =>
+    KNOWN_VARS.includes(name) ? varValue(name, lead, vendedorNome) : m
+  );
+}
+
+/** Limpeza final: garante que nada quebre por variável removida. */
+function cleanup(s: string): string {
+  return s
+    .replace(/[ \t]{2,}/g, " ") // espaço duplo
+    .replace(/ +([,.;:!?])/g, "$1") // espaço antes de pontuação
+    .replace(/,\s*,/g, ",") // vírgula órfã ", ,"
+    .replace(/\(\s*\)/g, "") // parêntese vazio "()"
+    .replace(/ +\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
- * Gera a mensagem final: social_proof opcional (só entra se o lead tem
- * rating >= 4 e pelo menos 3 avaliações), variáveis preenchidas e spins
- * resolvidos por último para variar a cada chamada.
+ * Gera a mensagem final. Suporta:
+ *  - {saudacao}: "Dr(a). <primeiro_nome>" com nome, ou "Olá" sem nome;
+ *  - blocos [[ ... ]]: somem inteiros se qualquer variável interna faltar
+ *    (ex: cláusula de rating/avaliações);
+ *  - {social_proof} legado (templates antigos);
+ *  - spintax {a|b}.
  */
 export function generateMessage(template: Template, lead: Lead, vendedorNome = ""): string {
   let corpo = template.corpo;
 
-  const temProva =
-    lead.rating != null && lead.rating >= 4 && (lead.qtd_avaliacoes ?? 0) >= 3;
-  const bloco = temProva && template.social_proof ? template.social_proof : "";
-  corpo = corpo.replaceAll("{social_proof}", bloco);
+  // 1. saudação adaptativa (com/sem primeiro_nome)
+  const primeiro = (lead.primeiro_nome ?? "").trim();
+  corpo = corpo.replaceAll("{saudacao}", primeiro ? `Dr(a). ${primeiro}` : "Olá");
 
+  // 2. blocos condicionais — avaliados ANTES de preencher as variáveis
+  corpo = resolveConditionalBlocks(corpo, lead, vendedorNome);
+
+  // 3. social_proof legado (compat com templates antigos)
+  const temProva = lead.rating != null && lead.rating >= 4 && (lead.qtd_avaliacoes ?? 0) >= 3;
+  corpo = corpo.replaceAll("{social_proof}", temProva && template.social_proof ? template.social_proof : "");
+
+  // 4. variáveis restantes
   corpo = fillVariables(corpo, lead, vendedorNome);
+
+  // 5. spintax {a|b}
   corpo = resolveSpin(corpo);
-  return corpo.replace(/[ \t]{2,}/g, " ").trim();
+
+  // 6. limpeza
+  return cleanup(corpo);
 }
 
 /** Hash da mensagem normalizada, para garantir unicidade na sessão. */

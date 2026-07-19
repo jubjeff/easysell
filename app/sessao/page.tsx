@@ -34,6 +34,11 @@ export default function SessaoPage() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // variantes de template (A/B/C) + modo escolhido ("aleatorio" ou um template_id)
+  const [variantes, setVariantes] = useState<any[]>([]);
+  const [modo, setModo] = useState<string>("");
+  const modoAplicadoRef = useRef<string>("");
+
   // form de nova sessão
   const [formCampaign, setFormCampaign] = useState("");
   const [formChip, setFormChip] = useState("");
@@ -92,16 +97,22 @@ export default function SessaoPage() {
     setLoading(true);
     setError("");
     try {
-      const [sRes, cRes, chRes] = await Promise.all([
+      const [sRes, cRes, chRes, tRes] = await Promise.all([
         fetch("/api/sessions"),
         fetch("/api/campaigns"),
         fetch("/api/chips"),
+        fetch("/api/templates"),
       ]);
       const sData = await sRes.json();
       const cData = await cRes.json();
       const chData = await chRes.json();
+      const tData = await tRes.json();
       setCampaigns((cData.campaigns ?? []).filter((c: any) => c.ativa));
       setChips((chData.chips ?? []).filter((c: any) => c.ativo));
+      const vars = (tData.templates ?? [])
+        .filter((t: any) => t.variante)
+        .sort((a: any, b: any) => a.variante.localeCompare(b.variante));
+      setVariantes(vars);
       if (sData.error || cData.error || chData.error) {
         setError(sData.error ?? cData.error ?? chData.error);
       } else if (sData.session) {
@@ -137,6 +148,75 @@ export default function SessaoPage() {
   useEffect(() => {
     if (current) setMsgDraft(current.mensagem);
   }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // inicializa o modo do seletor (lembra a última escolha por sessão)
+  useEffect(() => {
+    if (!session || variantes.length === 0 || modo) return;
+    const salvo = localStorage.getItem(`easysell_modo_${session.id}`);
+    const padraoA = variantes.find((v) => v.variante === "A")?.id ?? variantes[0]?.id ?? "";
+    setModo(salvo ?? padraoA);
+  }, [session, variantes, modo]);
+
+  // aplica o modo escolhido a cada novo lead (Aleatório sorteia por lead)
+  useEffect(() => {
+    if (!current || !modo || busy) return;
+    if (modoAplicadoRef.current === current.id) return; // já aplicado neste lead
+    const atualVar = current.templates?.variante;
+    if (modo === "aleatorio") {
+      modoAplicadoRef.current = current.id;
+      const sorteio = variantes[Math.floor(Math.random() * variantes.length)];
+      if (sorteio) aplicarTemplate(sorteio.id);
+    } else {
+      const desejado = variantes.find((v) => v.id === modo);
+      if (desejado && desejado.variante !== atualVar) {
+        modoAplicadoRef.current = current.id;
+        aplicarTemplate(desejado.id);
+      } else {
+        modoAplicadoRef.current = current.id;
+      }
+    }
+  }, [current?.id, modo]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Regenera o item atual usando um template específico (troca a variante). */
+  async function aplicarTemplate(templateId: string) {
+    if (!current || busy) return;
+    setBusy(true);
+    const res = await fetch(`/api/queue/${current.id}/regenerate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ template_id: templateId }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (res.ok) {
+      setQueue((qs) =>
+        qs.map((q) =>
+          q.id === current.id
+            ? { ...q, mensagem: data.item.mensagem, template_id: templateId, templates: data.item.templates }
+            : q
+        )
+      );
+      setMsgDraft(data.item.mensagem);
+    }
+  }
+
+  /** Troca o modo do seletor (A/B/C/Aleatório), lembra por sessão e aplica agora. */
+  function escolherModo(novoModo: string) {
+    setModo(novoModo);
+    if (session) localStorage.setItem(`easysell_modo_${session.id}`, novoModo);
+    modoAplicadoRef.current = ""; // força reaplicar no lead atual
+    if (!current) return;
+    if (novoModo === "aleatorio") {
+      const sorteio = variantes[Math.floor(Math.random() * variantes.length)];
+      if (sorteio) {
+        modoAplicadoRef.current = current.id;
+        aplicarTemplate(sorteio.id);
+      }
+    } else {
+      modoAplicadoRef.current = current.id;
+      aplicarTemplate(novoModo);
+    }
+  }
 
   // ---------- ações ----------
   async function createSession(overrideJanela = false) {
@@ -650,11 +730,54 @@ export default function SessaoPage() {
               </p>
               <p className="font-mono text-[11px] text-dim/70 mt-0.5">
                 {lead?.rating ? `${lead.rating}★ (${lead.qtd_avaliacoes}) · ` : ""}
-                score {lead?.score} · {current.templates?.nome}
+                score {lead?.score}
                 {current.editada && " · editada"}
               </p>
             </div>
           </div>
+
+          {/* seletor de variante A/B/C/Aleatório */}
+          {variantes.length > 0 && (
+            <div>
+              <label className="label">Variante da mensagem</label>
+              <div className="flex flex-wrap gap-1.5">
+                {variantes.map((v) => {
+                  const ativo = modo === v.id && current.templates?.variante === v.variante;
+                  return (
+                    <button
+                      key={v.id}
+                      type="button"
+                      disabled={busy}
+                      onClick={() => escolherModo(v.id)}
+                      title={v.nome}
+                      className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors disabled:opacity-50 ${
+                        ativo
+                          ? "bg-lima text-navy-950 border-lima"
+                          : "bg-navy-900 text-dim border-navy-700 hover:text-paper"
+                      }`}
+                    >
+                      {v.variante}
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => escolherModo("aleatorio")}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold border transition-colors disabled:opacity-50 ${
+                    modo === "aleatorio"
+                      ? "bg-viola text-navy-950 border-viola"
+                      : "bg-navy-900 text-dim border-navy-700 hover:text-paper"
+                  }`}
+                >
+                  🎲 Aleatório
+                </button>
+              </div>
+              <p className="font-mono text-[10px] text-dim/60 mt-1">
+                {current.templates?.nome}
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="label">Mensagem — edite à vontade antes de enviar</label>
@@ -664,7 +787,7 @@ export default function SessaoPage() {
               value={msgDraft}
               onChange={(e) => setMsgDraft(e.target.value)}
             />
-            <button className="btn-ghost !px-2 !py-1 text-xs mt-1" onClick={regenerate}>
+            <button className="btn-ghost !px-2 !py-1 text-xs mt-1" onClick={regenerate} disabled={busy}>
               🔄 Regenerar variação
             </button>
           </div>

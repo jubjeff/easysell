@@ -17,6 +17,7 @@ create table leads (
   id                uuid primary key default gen_random_uuid(),
   google_place_id   text unique,
   nome              text not null,
+  primeiro_nome     text,
   telefone          text not null,
   endereco          text,
   cidade            text not null,
@@ -55,6 +56,7 @@ create table templates (
   nome         text not null,
   corpo        text not null,
   social_proof text,
+  variante     text,          -- 'A' | 'B' | 'C' (variantes canônicas) | null
   ativo        boolean not null default true,
   created_at   timestamptz not null default now()
 );
@@ -184,16 +186,32 @@ create table settings (
 insert into settings (id) values (1);
 
 -- ============================================================
--- SEED: templates iniciais (edite à vontade na tela Templates)
+-- SEED: 3 variantes de mensagem (A padrão, B, C). Use {saudacao} para a
+-- saudação adaptativa e blocos [[ ... ]] para cláusulas que somem quando
+-- a variável interna falta. Edite à vontade na tela Templates.
 -- ============================================================
-insert into templates (nome, corpo, social_proof) values
+insert into templates (nome, corpo, variante, ativo) values
 (
-  'Demo primeiro — padrão',
-  '{Oi|Olá|Opa}, {tudo bem|tudo certo|tudo bom}? Me chamo Jefferson, sou desenvolvedor aqui de Pernambuco. {Encontrei|Achei|Vi} o {nome_negocio} no Google e {notei|percebi|vi} que vocês ainda não têm um site próprio. {social_proof}Eu crio páginas profissionais para {nicho} — e antes de falar de qualquer valor, prefiro mostrar: posso montar uma demonstração gratuita de como ficaria o site de vocês, sem compromisso nenhum. {Posso enviar|Te mando|Envio} o link quando estiver pronta?',
-  'Vi que vocês têm {rating}⭐ no Google com {qtd_avaliacoes} avaliações — {parabéns|muito bom|excelente}! '
+  'A — Prova antes do pitch',
+  '{saudacao}, vi as avaliações do {nome_negocio} no Google[[ ({rating} estrelas, {qtd_avaliacoes} pessoas)]] e reparei que quem chega até aí não encontra um site pra confirmar a confiança e chamar no WhatsApp.
+
+Montei uma prévia de como ficaria a página de vocês, sem custo e sem compromisso. Posso te mandar o link pra você julgar? Se não gostar, é só ignorar.
+
+— Jefferson, Tégui', 'A', true
 ),
 (
-  'Demo primeiro — curto',
-  '{Oi|Olá}, {tudo bem|tudo certo}? Sou o Jefferson, desenvolvedor web. {Vi|Encontrei} o {nome_negocio} no Google e notei que falta um site para vocês em {cidade}. {social_proof}Faço o seguinte: monto uma demo gratuita de como ficaria, sem compromisso, e você decide se gosta. {Topa|Pode ser|Fechado}?',
-  'Com {rating}⭐ e {qtd_avaliacoes} avaliações, um site ia converter muita gente que pesquisa por {nicho} na região. '
+  'B — Curiosidade / demo pronta',
+  'Oi[[ Dr(a). {primeiro_nome}]], tudo certo? Encontrei o {nome_negocio} pesquisando {nicho} em {cidade} e a reputação de vocês chama atenção[[ ({rating} estrelas)]].
+
+Como gostei do trabalho, já adiantei uma demo de site pra vocês. Queria só seu ok pra te enviar e ver o que acha. Levo 30 segundos do seu tempo.
+
+Posso mandar?', 'B', true
+),
+(
+  'C — Direto ao problema do cliente',
+  '{saudacao}, uma pergunta rápida: quando alguém pesquisa "{nicho} em {cidade}" e encontra o {nome_negocio}, hoje cai direto no WhatsApp ou no Google, certo?
+
+O problema é que muita gente pesquisa o nome, não acha um site e desiste no meio do caminho. Montei uma prévia de página pra resolver isso, gratuita. Te envio pra dar uma olhada?
+
+— Jefferson, Tégui', 'C', true
 );
