@@ -4,6 +4,7 @@ import { normalizePhone } from "@/lib/phone";
 import { classifyWebsite, computeScore } from "@/lib/score";
 import { requireUser, requireAdmin, scopeFilter } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
+import { ensureCampaigns } from "@/lib/campaigns";
 
 export const dynamic = "force-dynamic";
 
@@ -117,5 +118,16 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
     inserted = data?.length ?? 0;
   }
 
-  return NextResponse.json({ inserted, duplicated, invalid: invalidos.length, invalidos });
+  // cria a campanha (nicho+cidade) na hora da captação — o vendedor não
+  // precisa lembrar de criar depois para poder disparar
+  const campanhasCriadas = await ensureCampaigns(client, prepared);
+
+  return NextResponse.json({
+    inserted,
+    duplicated,
+    invalid: invalidos.length,
+    invalidos,
+    campanhas_criadas: campanhasCriadas.length,
+    campanhas: campanhasCriadas.map((c) => c.nome),
+  });
 });

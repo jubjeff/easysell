@@ -90,7 +90,8 @@ export default function CaptacaoPage() {
     setBusy(false);
     setMsg(
       res.ok
-        ? `✅ ${data.inserted} leads importados · ${data.duplicated} duplicados ignorados · ${data.invalid} inválidos`
+        ? `✅ ${data.inserted} leads importados · ${data.duplicated} duplicados ignorados · ${data.invalid} inválidos` +
+            (data.campanhas_criadas ? ` · 🎯 campanha criada: ${data.campanhas.join(", ")}` : "")
         : data.error
     );
     if (res.ok) search(); // refaz para atualizar flags de duplicado
@@ -117,7 +118,7 @@ export default function CaptacaoPage() {
       res.ok
         ? `✅ ${data.inserted} importados · ${data.duplicated} duplicados · ${data.invalid} inválidos${
             data.invalidos?.length ? ` (${data.invalidos.slice(0, 5).join(", ")})` : ""
-          }`
+          }${data.campanhas_criadas ? ` · 🎯 campanha criada: ${data.campanhas.join(", ")}` : ""}`
         : data.error
     );
   }

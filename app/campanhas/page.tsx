@@ -7,6 +7,7 @@ export default function CampanhasPage() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [editing, setEditing] = useState<any | null>(null);
   const [msg, setMsg] = useState("");
+  const [sincronizando, setSincronizando] = useState(false);
 
   const load = useCallback(async () => {
     const [c, t] = await Promise.all([
@@ -52,6 +53,25 @@ export default function CampanhasPage() {
     } else setMsg((await res.json()).error);
   }
 
+  /** Backfill: cria campanha para todo nicho+cidade de lead que ainda não tem uma. */
+  async function sincronizar() {
+    setSincronizando(true);
+    setMsg("");
+    const res = await fetch("/api/campaigns/sincronizar", { method: "POST" });
+    const d = await res.json();
+    setSincronizando(false);
+    if (!res.ok) {
+      setMsg(d.error ?? "Erro ao sincronizar.");
+      return;
+    }
+    setMsg(
+      d.criadas > 0
+        ? `🎯 ${d.criadas} campanha(s) criada(s): ${d.campanhas.join(", ")}`
+        : "Todos os leads já têm campanha para o nicho/cidade deles."
+    );
+    load();
+  }
+
   async function toggleAtiva(c: any) {
     await fetch(`/api/campaigns/${c.id}`, {
       method: "PATCH",
@@ -75,11 +95,26 @@ export default function CampanhasPage() {
           <span className="tag-state text-dim">campanhas</span>
           <h1 className="text-2xl font-bold tracking-tight mt-1">Campanhas</h1>
         </div>
-        <button className="btn-primary" onClick={novo}>
-          + Nova campanha
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary" onClick={sincronizar} disabled={sincronizando}>
+            {sincronizando ? "Sincronizando…" : "🔄 Sincronizar com leads existentes"}
+          </button>
+          <button className="btn-primary" onClick={novo}>
+            + Nova campanha
+          </button>
+        </div>
       </div>
-      {msg && <p className="card-line !border-red-900/70 text-red-300 text-sm">{msg}</p>}
+      {msg && (
+        <p
+          className={`card-line text-sm ${
+            msg.startsWith("🎯") || msg.startsWith("Todos")
+              ? "!border-lima-deep text-lima"
+              : "!border-red-900/70 text-red-300"
+          }`}
+        >
+          {msg}
+        </p>
+      )}
 
       {editing && (
         <div className="card space-y-3 border-emerald-800">
