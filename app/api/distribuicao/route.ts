@@ -25,9 +25,10 @@ export const GET = withJsonError(async function GET(req: NextRequest) {
   if (sp.get("nicho")) q = q.eq("nicho", sp.get("nicho"));
   if (sp.get("cidade")) q = q.eq("cidade", sp.get("cidade"));
 
+  // qualquer perfil ativo pode receber leads (admin também prospecta, não só vendedor)
   const [{ data: naoAtribuidos }, { data: vendedores }, { data: carteira }] = await Promise.all([
     q,
-    client.from("profiles").select("id, nome, ativo").eq("role", "vendedor").order("nome"),
+    client.from("profiles").select("id, nome, role, ativo").order("role").order("nome"),
     client.from("leads").select("vendedor_id").not("vendedor_id", "is", null),
   ]);
 

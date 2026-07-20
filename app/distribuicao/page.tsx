@@ -124,6 +124,7 @@ export default function DistribuicaoPage() {
             <div className="data text-2xl font-semibold text-lima">{v.carteira}</div>
             <div className="font-mono text-[11px] text-dim mt-0.5">
               {v.nome}
+              {v.role === "admin" && " (admin)"}
               {!v.ativo && " (inativo)"}
             </div>
           </div>
@@ -161,6 +162,7 @@ export default function DistribuicaoPage() {
               }`}
             >
               {v.nome}
+              {v.role === "admin" && " (admin)"}
             </button>
           ))}
         </div>
@@ -185,6 +187,7 @@ export default function DistribuicaoPage() {
               {vendedoresAtivos.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.nome}
+                  {v.role === "admin" && " (admin)"}
                 </option>
               ))}
             </select>
