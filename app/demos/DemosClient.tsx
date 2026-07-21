@@ -128,6 +128,7 @@ export default function DemosClient() {
       nicho: editing.nicho,
       url: editing.url,
       script_padrao: editing.script_padrao ?? "",
+      script_dm: editing.script_dm ?? "",
       ativo: editing.ativo ?? true,
     };
     const res = await fetch(isNew ? "/api/demos" : `/api/demos/${editing.id}`, {
@@ -231,7 +232,14 @@ export default function DemosClient() {
               className="btn-primary !py-1.5"
               onClick={() => {
                 setReordering(false);
-                setEditing({ _isNew: true, nicho: "", url: "", script_padrao: "", ativo: true });
+                setEditing({
+                  _isNew: true,
+                  nicho: "",
+                  url: "",
+                  script_padrao: "",
+                  script_dm: "",
+                  ativo: true,
+                });
                 setErro("");
               }}
             >
@@ -313,7 +321,7 @@ export default function DemosClient() {
             </div>
           </div>
           <div>
-            <label className="label">Script padrão</label>
+            <label className="label">Script padrão (WhatsApp)</label>
             <textarea
               className="input font-mono text-sm min-h-24"
               rows={4}
@@ -324,6 +332,20 @@ export default function DemosClient() {
             <p className="font-mono text-[11px] text-dim/70 mt-1.5">
               variável: <span className="text-lima">{"{nome_negocio}"}</span> — resolvida a partir do
               lead quando aberto pelo Kanban.
+            </p>
+          </div>
+          <div>
+            <label className="label">Script de DM (Instagram)</label>
+            <textarea
+              className="input font-mono text-sm min-h-20"
+              rows={3}
+              placeholder="Versão mais curta, pensada pra DM — ex: Oi! Vi o perfil da {nome_negocio}…"
+              value={editing.script_dm ?? ""}
+              onChange={(e) => setEditing({ ...editing, script_dm: e.target.value })}
+            />
+            <p className="font-mono text-[11px] text-dim/70 mt-1.5">
+              usado na sessão assistida de DM (aba Sessão de disparo → 📸 DM). Vazio = esse nicho
+              não entra em fila de DM.
             </p>
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer w-fit">

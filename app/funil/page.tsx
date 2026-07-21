@@ -8,6 +8,8 @@ import { formatPhone } from "@/lib/phone";
 const BRL = (n: number) =>
   Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const ORIGEM_ICON: Record<string, string> = { google: "🔍", instagram: "📸", manual: "✍️" };
+
 /** Rampa de cor por estágio: violeta (frio) → lima (ganho); perdido apagado. */
 const STAGE_COLOR: Record<LeadStage, string> = {
   novo: "#8B7CF6",
@@ -27,6 +29,7 @@ export default function FunilPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [vendedores, setVendedores] = useState<any[]>([]);
   const [filtroVend, setFiltroVend] = useState("");
+  const [filtroOrigem, setFiltroOrigem] = useState("");
   const [mobileStage, setMobileStage] = useState<LeadStage>("novo");
 
   const load = useCallback(async () => {
@@ -38,11 +41,14 @@ export default function FunilPage() {
       const v = await fetch("/api/vendedores").then((r) => r.json());
       setVendedores(v.vendedores ?? []);
     }
-    const qs = admin && filtroVend ? `?vendedor=${filtroVend}` : "";
+    const params = new URLSearchParams();
+    if (admin && filtroVend) params.set("vendedor", filtroVend);
+    if (admin && filtroOrigem) params.set("origem", filtroOrigem);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     const d = await fetch(`/api/leads${qs}`).then((r) => r.json());
     setLeads(d.leads ?? []);
     setLoading(false);
-  }, [filtroVend, vendedores.length]);
+  }, [filtroVend, filtroOrigem, vendedores.length]);
 
   useEffect(() => {
     load();
@@ -87,19 +93,31 @@ export default function FunilPage() {
           </h1>
         </div>
         {isAdmin && (
-          <select
-            className="input !w-auto"
-            value={filtroVend}
-            onChange={(e) => setFiltroVend(e.target.value)}
-          >
-            <option value="">Todos os vendedores</option>
-            <option value="nao_atribuido">— Não atribuídos —</option>
-            {vendedores.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.nome}
-              </option>
-            ))}
-          </select>
+          <div className="flex gap-2 flex-wrap">
+            <select
+              className="input !w-auto"
+              value={filtroVend}
+              onChange={(e) => setFiltroVend(e.target.value)}
+            >
+              <option value="">Todos os vendedores</option>
+              <option value="nao_atribuido">— Não atribuídos —</option>
+              {vendedores.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.nome}
+                </option>
+              ))}
+            </select>
+            <select
+              className="input !w-auto"
+              value={filtroOrigem}
+              onChange={(e) => setFiltroOrigem(e.target.value)}
+            >
+              <option value="">Todas as origens</option>
+              <option value="google">🔍 Google</option>
+              <option value="instagram">📸 Instagram</option>
+              <option value="manual">✍️ Manual</option>
+            </select>
+          </div>
         )}
       </div>
 
@@ -224,6 +242,9 @@ function Card({ lead: l }: { lead: any }) {
           href={`/leads/${l.id}`}
           className="font-medium text-sm text-paper hover:text-lima transition-colors leading-snug"
         >
+          <span title={l.origem} className="mr-1">
+            {ORIGEM_ICON[l.origem] ?? "✍️"}
+          </span>
           {l.nome}
         </Link>
         <span className="data text-[11px] text-dim shrink-0 mt-0.5">{l.score}</span>
@@ -231,7 +252,9 @@ function Card({ lead: l }: { lead: any }) {
       <p className="font-mono text-[11px] text-dim mt-1">
         {l.nicho} · {l.cidade}
       </p>
-      <p className="data text-[11px] text-dim/70 mt-0.5">{formatPhone(l.telefone)}</p>
+      <p className="data text-[11px] text-dim/70 mt-0.5">
+        {l.telefone ? formatPhone(l.telefone) : l.instagram_handle ? `📸 @${l.instagram_handle}` : "—"}
+      </p>
       {l.stage === "fechado" && l.valor_venda != null ? (
         <p className="data text-sm text-lima font-semibold mt-1.5">{BRL(l.valor_venda)}</p>
       ) : (

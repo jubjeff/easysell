@@ -8,8 +8,10 @@ export type LeadStage =
   | "fechado"
   | "perdido";
 export type LeadSource = "places" | "csv" | "manual";
+export type LeadOrigem = "google" | "instagram" | "manual";
+export type CanalContato = "whatsapp" | "instagram_dm";
 export type SessionStatus = "ativa" | "pausada" | "encerrada" | "concluida";
-export type SessionType = "disparo" | "aquecimento";
+export type SessionType = "disparo" | "aquecimento" | "instagram_dm";
 export type QueueStatus = "pendente" | "enviado" | "numero_invalido" | "pulado";
 export type MsgEvent =
   | "gerada"
@@ -61,7 +63,7 @@ export interface Lead {
   google_place_id: string | null;
   nome: string;
   primeiro_nome: string | null;
-  telefone: string;
+  telefone: string | null;
   endereco: string | null;
   cidade: string;
   nicho: string;
@@ -78,6 +80,12 @@ export interface Lead {
   valor_venda: number | null;
   plano: string | null;
   motivo_perda: string | null;
+  origem: LeadOrigem;
+  instagram_handle: string | null;
+  tem_whatsapp_na_bio: boolean;
+  canal_contato_ativo: CanalContato;
+  contactado_em: string | null;
+  respondido_em: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -104,6 +112,7 @@ export interface Demo {
   nicho: string;
   url: string;
   script_padrao: string;
+  script_dm: string | null;
   ativo: boolean;
   ordem: number;
   contador_copias: number;
@@ -131,7 +140,7 @@ export interface DispatchSession {
   id: string;
   vendedor_id: string | null;
   campaign_id: string;
-  chip_id: string;
+  chip_id: string | null;
   tipo: SessionType;
   meta_do_dia: number;
   intervalo_min_s: number;
@@ -178,7 +187,8 @@ export interface QueueItem {
   id: string;
   session_id: string;
   lead_id: string;
-  template_id: string;
+  template_id: string | null;
+  demo_id: string | null;
   posicao: number;
   mensagem: string;
   msg_hash: string;
@@ -197,6 +207,7 @@ export interface Settings {
   volume: number;
   aquecimento_limite_diario: number;
   maturacao_dias: number;
+  dm_limite_diario: number;
 }
 
 export const STAGES: { key: LeadStage; label: string }[] = [

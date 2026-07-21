@@ -24,6 +24,7 @@ export const PATCH = withJsonError(async function PATCH(req: NextRequest) {
     "som_ativado",
     "volume",
     "aquecimento_limite_diario",
+    "dm_limite_diario",
   ]) {
     if (k in body) patch[k] = body[k];
   }

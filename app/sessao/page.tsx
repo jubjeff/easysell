@@ -42,7 +42,7 @@ export default function SessaoPage() {
   // form de nova sessão
   const [formCampaign, setFormCampaign] = useState("");
   const [formChip, setFormChip] = useState("");
-  const [formTipo, setFormTipo] = useState<"disparo" | "aquecimento">("disparo");
+  const [formTipo, setFormTipo] = useState<"disparo" | "aquecimento" | "instagram_dm">("disparo");
   const [formMeta, setFormMeta] = useState(10);
   const [formMin, setFormMin] = useState(3);
   const [formMax, setFormMax] = useState(9);
@@ -150,8 +150,9 @@ export default function SessaoPage() {
   }, [current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // inicializa o modo do seletor (lembra a última escolha por sessão)
+  // — não se aplica a DM: sem variantes A/B/C, só o script_dm do nicho
   useEffect(() => {
-    if (!session || variantes.length === 0 || modo) return;
+    if (!session || session.tipo === "instagram_dm" || variantes.length === 0 || modo) return;
     const salvo = localStorage.getItem(`easysell_modo_${session.id}`);
     const padraoA = variantes.find((v) => v.variante === "A")?.id ?? variantes[0]?.id ?? "";
     setModo(salvo ?? padraoA);
@@ -159,7 +160,7 @@ export default function SessaoPage() {
 
   // aplica o modo escolhido a cada novo lead (Aleatório sorteia por lead)
   useEffect(() => {
-    if (!current || !modo || busy) return;
+    if (!current || !modo || busy || session?.tipo === "instagram_dm") return;
     if (modoAplicadoRef.current === current.id) return; // já aplicado neste lead
     const atualVar = current.templates?.variante;
     if (modo === "aleatorio") {
@@ -415,6 +416,9 @@ export default function SessaoPage() {
       else if (k === "w" && current.leads?.telefone) {
         copyMessage();
         window.open(waLink(current.leads.telefone, msgDraft), "_blank");
+      } else if (k === "w" && current.leads?.instagram_handle) {
+        copyMessage();
+        window.open(`https://instagram.com/${current.leads.instagram_handle}`, "_blank");
       } else if (k === "r") regenerate();
       else if (k === "p") resolveItem("pulado");
     }
@@ -475,10 +479,64 @@ export default function SessaoPage() {
           <span className="tag-state text-dim">nova_sessão</span>
           <h1 className="text-2xl font-bold tracking-tight mt-1">Montar fila do dia</h1>
         </div>
+        <div className="card space-y-2">
+          <label className="label">Tipo de sessão</label>
+          <div className="grid grid-cols-3 gap-1 rounded-xl bg-navy-950/70 p-1">
+            <button
+              type="button"
+              className={`rounded-lg px-2 py-2 text-sm font-medium transition-colors ${
+                formTipo === "disparo" ? "bg-lima text-navy-950" : "text-dim hover:text-paper"
+              }`}
+              onClick={() => setFormTipo("disparo")}
+            >
+              🚀 Disparo
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg px-2 py-2 text-sm font-medium transition-colors ${
+                formTipo === "aquecimento" ? "bg-amber-400 text-navy-950" : "text-dim hover:text-paper"
+              }`}
+              onClick={() => {
+                setFormTipo("aquecimento");
+                setFormMin(5);
+                setFormMax(15);
+              }}
+            >
+              🔥 Aquecer
+            </button>
+            <button
+              type="button"
+              className={`rounded-lg px-2 py-2 text-sm font-medium transition-colors ${
+                formTipo === "instagram_dm" ? "bg-viola text-navy-950" : "text-dim hover:text-paper"
+              }`}
+              onClick={() => {
+                setFormTipo("instagram_dm");
+                setFormMin(5);
+                setFormMax(15);
+              }}
+            >
+              📸 DM
+            </button>
+          </div>
+          {formTipo === "aquecimento" && (
+            <p className="text-xs text-amber-300/80 mt-2">
+              Ritmo bem mais lento — usa a fila normal de leads, mas respeita o teto de
+              aquecimento definido em Configurações, mesmo para chips já maduros.
+            </p>
+          )}
+          {formTipo === "instagram_dm" && (
+            <p className="text-xs text-violet-300/80 mt-2">
+              Fila de perfis para mandar DM manualmente — mesmo timer do disparo, sem chip (usa
+              sua própria conta do Instagram). Sem histórico de risco de ban ainda nesse canal:
+              comece conservador (teto em Configurações).
+            </p>
+          )}
+        </div>
+
         {error && (
           <div className="card-line !border-red-900/70 text-sm text-red-300">{error}</div>
         )}
-        {chips.length === 0 ? (
+        {formTipo !== "instagram_dm" && chips.length === 0 ? (
           <div className="card py-10 text-center space-y-3">
             <p className="tag-state text-dim">sem_chips</p>
             <p className="text-sm text-dim">
@@ -500,61 +558,26 @@ export default function SessaoPage() {
           </div>
         ) : (
           <div className="card space-y-5">
-            <div>
-              <label className="label">Tipo de sessão</label>
-              <div className="grid grid-cols-2 gap-1 rounded-xl bg-navy-950/70 p-1">
-                <button
-                  type="button"
-                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    formTipo === "disparo"
-                      ? "bg-lima text-navy-950"
-                      : "text-dim hover:text-paper"
-                  }`}
-                  onClick={() => setFormTipo("disparo")}
-                >
-                  🚀 Disparo
-                </button>
-                <button
-                  type="button"
-                  className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                    formTipo === "aquecimento"
-                      ? "bg-amber-400 text-navy-950"
-                      : "text-dim hover:text-paper"
-                  }`}
-                  onClick={() => {
-                    setFormTipo("aquecimento");
-                    setFormMin(5);
-                    setFormMax(15);
-                  }}
-                >
-                  🔥 Aquecimento
-                </button>
+            {formTipo !== "instagram_dm" && (
+              <div>
+                <label className="label">Chip</label>
+                <select className="input" value={formChip} onChange={(e) => setFormChip(e.target.value)}>
+                  <option value="">Selecione…</option>
+                  {chips.map((c) => (
+                    <option key={c.id} value={c.id} disabled={c.maturando}>
+                      {c.maturando
+                        ? `${c.nome} — 🌱 em maturação (bloqueado)`
+                        : `${c.nome} — ${c.hoje}/${c.limite_diario_override ?? c.preset.limite} hoje · ${c.preset.fase}`}
+                    </option>
+                  ))}
+                </select>
+                {chips.some((c) => c.maturando) && (
+                  <p className="text-xs text-amber-300/80 mt-1.5">
+                    Chips em maturação não podem disparar — conclua o ciclo na aba 🌱 Maturação.
+                  </p>
+                )}
               </div>
-              {formTipo === "aquecimento" && (
-                <p className="text-xs text-amber-300/80 mt-2">
-                  Ritmo bem mais lento — usa a fila normal de leads, mas respeita o teto de
-                  aquecimento definido em Configurações, mesmo para chips já maduros.
-                </p>
-              )}
-            </div>
-            <div>
-              <label className="label">Chip</label>
-              <select className="input" value={formChip} onChange={(e) => setFormChip(e.target.value)}>
-                <option value="">Selecione…</option>
-                {chips.map((c) => (
-                  <option key={c.id} value={c.id} disabled={c.maturando}>
-                    {c.maturando
-                      ? `${c.nome} — 🌱 em maturação (bloqueado)`
-                      : `${c.nome} — ${c.hoje}/${c.limite_diario_override ?? c.preset.limite} hoje · ${c.preset.fase}`}
-                  </option>
-                ))}
-              </select>
-              {chips.some((c) => c.maturando) && (
-                <p className="text-xs text-amber-300/80 mt-1.5">
-                  Chips em maturação não podem disparar — conclua o ciclo na aba 🌱 Maturação.
-                </p>
-              )}
-            </div>
+            )}
             <div>
               <label className="label">Campanha</label>
               <select
@@ -569,6 +592,11 @@ export default function SessaoPage() {
                   </option>
                 ))}
               </select>
+              {formTipo === "instagram_dm" && (
+                <p className="text-xs text-dim mt-1.5">
+                  Usa o script de DM cadastrado em Demos para o nicho da campanha.
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div>
@@ -604,14 +632,18 @@ export default function SessaoPage() {
             </div>
             <button
               className="btn-primary w-full !py-3"
-              disabled={!formCampaign || !formChip || busy || formMax < formMin}
+              disabled={
+                !formCampaign || (formTipo !== "instagram_dm" && !formChip) || busy || formMax < formMin
+              }
               onClick={() => createSession()}
             >
               {busy
                 ? "Montando fila…"
                 : formTipo === "aquecimento"
                   ? "🔥 Iniciar aquecimento"
-                  : "🚀 Iniciar sessão"}
+                  : formTipo === "instagram_dm"
+                    ? "📸 Iniciar DM"
+                    : "🚀 Iniciar sessão"}
             </button>
           </div>
         )}
@@ -624,6 +656,13 @@ export default function SessaoPage() {
   const hojeTotal = (limits?.hoje ?? 0) + enviados;
   const timerPct =
     drawnInterval > 0 ? Math.max(0, Math.min(100, (remaining / drawnInterval) * 100)) : 0;
+  const isDmSession = session.tipo === "instagram_dm";
+  const contatoHref = isDmSession
+    ? lead?.instagram_handle
+      ? `https://instagram.com/${lead.instagram_handle}`
+      : undefined
+    : waLink(lead?.telefone ?? "", msgDraft);
+  const contatoLabel = isDmSession ? "Instagram" : "WhatsApp";
 
   return (
     <div className="max-w-2xl mx-auto space-y-4">
@@ -631,13 +670,17 @@ export default function SessaoPage() {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <span className="tag-state text-dim">
-            {session.tipo === "aquecimento" ? "aquecimento" : "disparo"}
+            {session.tipo === "aquecimento"
+              ? "aquecimento"
+              : isDmSession
+                ? "instagram_dm"
+                : "disparo"}
           </span>
           <h1 className="text-xl font-bold tracking-tight truncate">
             {session.campaigns?.nome ?? ""}
           </h1>
           <p className="font-mono text-[11px] text-dim truncate">
-            {session.chips?.nome ?? "chip"}
+            {isDmSession ? "📸 Instagram DM" : session.chips?.nome ?? "chip"}
             {paused && <span className="text-amber-400"> · pausada</span>}
           </p>
         </div>
@@ -726,7 +769,8 @@ export default function SessaoPage() {
             <div className="min-w-0">
               <h2 className="text-xl font-bold tracking-tight">{lead?.nome}</h2>
               <p className="font-mono text-xs text-dim mt-1">
-                {lead?.nicho} · {lead?.cidade} · {formatPhone(lead?.telefone ?? "")}
+                {lead?.nicho} · {lead?.cidade} ·{" "}
+                {lead?.telefone ? formatPhone(lead.telefone) : lead?.instagram_handle ? `@${lead.instagram_handle}` : "—"}
               </p>
               <p className="font-mono text-[11px] text-dim/70 mt-0.5">
                 {lead?.rating ? `${lead.rating}★ (${lead.qtd_avaliacoes}) · ` : ""}
@@ -736,8 +780,8 @@ export default function SessaoPage() {
             </div>
           </div>
 
-          {/* seletor de variante A/B/C/Aleatório */}
-          {variantes.length > 0 && (
+          {/* seletor de variante A/B/C/Aleatório — não existe em DM (1 script por nicho) */}
+          {!isDmSession && variantes.length > 0 && (
             <div>
               <label className="label">Variante da mensagem</label>
               <div className="flex flex-wrap gap-1.5">
@@ -800,15 +844,17 @@ export default function SessaoPage() {
             <button className="btn-secondary" onClick={copyMessage}>
               {copied ? "✓ Copiado" : "📋 Copiar"}
             </button>
-            <a
-              className="btn-secondary"
-              href={waLink(lead?.telefone ?? "", msgDraft)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => copyMessage()}
-            >
-              🟢 WhatsApp
-            </a>
+            {contatoHref && (
+              <a
+                className="btn-secondary"
+                href={contatoHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => copyMessage()}
+              >
+                {isDmSession ? "📸" : "🟢"} {contatoLabel}
+              </a>
+            )}
             <span className="flex-1" />
             <button
               className="btn-ghost"
@@ -826,7 +872,7 @@ export default function SessaoPage() {
             </button>
           </div>
           <p className="hidden sm:block font-mono text-[10px] text-dim/60 -mt-2">
-            atalhos: E enviado · C copiar · W whatsapp · R regenerar · P pular
+            atalhos: E enviado · C copiar · W {contatoLabel.toLowerCase()} · R regenerar · P pular
           </p>
 
           {/* ações menos frequentes — mobile (as principais ficam na barra fixa) */}
@@ -869,16 +915,18 @@ export default function SessaoPage() {
           <button className="btn-secondary !px-3.5" onClick={copyMessage} aria-label="Copiar mensagem">
             {copied ? "✓" : "📋"}
           </button>
-          <a
-            className="btn-secondary !px-3.5"
-            href={waLink(lead?.telefone ?? "", msgDraft)}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={() => copyMessage()}
-            aria-label="Abrir WhatsApp"
-          >
-            🟢
-          </a>
+          {contatoHref && (
+            <a
+              className="btn-secondary !px-3.5"
+              href={contatoHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => copyMessage()}
+              aria-label={`Abrir ${contatoLabel}`}
+            >
+              {isDmSession ? "📸" : "🟢"}
+            </a>
+          )}
           <button
             className="btn-primary flex-1 !py-3"
             disabled={busy}

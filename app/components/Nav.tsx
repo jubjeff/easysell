@@ -36,6 +36,7 @@ const groups: Group[] = [
     label: "Gestão",
     items: [
       { href: "/captacao", label: "Captação", icon: "🔎", adminOnly: true },
+      { href: "/instagram", label: "Instagram", icon: "📸", adminOnly: true },
       { href: "/distribuicao", label: "Distribuição", icon: "🗂️", adminOnly: true },
       { href: "/campanhas", label: "Campanhas", icon: "🎯", adminOnly: true },
       { href: "/templates", label: "Templates", icon: "✉️", adminOnly: true },

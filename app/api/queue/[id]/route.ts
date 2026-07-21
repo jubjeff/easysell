@@ -25,7 +25,7 @@ export const PATCH = withJsonError(async function PATCH(
 
   const { data: item } = await client
     .from("queue_items")
-    .select("*, leads(telefone), dispatch_sessions(campaign_id, chip_id, vendedor_id)")
+    .select("*, leads(telefone, contactado_em), dispatch_sessions(campaign_id, chip_id, vendedor_id)")
     .eq("id", params.id)
     .single();
   if (!item) return NextResponse.json({ error: "Item não encontrado." }, { status: 404 });
@@ -72,14 +72,14 @@ export const PATCH = withJsonError(async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     if (body.action === "enviado") {
-      await client
-        .from("leads")
-        .update({
-          stage: "contactado",
-          stage_changed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", item.lead_id);
+      const leadPatch: Record<string, unknown> = {
+        stage: "contactado",
+        stage_changed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      // "contactado_em" grava só a 1ª vez — base do tempo até resposta por origem
+      if (!(item as any).leads?.contactado_em) leadPatch.contactado_em = new Date().toISOString();
+      await client.from("leads").update(leadPatch).eq("id", item.lead_id);
       // registro permanente: esse número nunca mais entra em fila de disparo
       const telefone = (item as any).leads?.telefone;
       if (telefone) {

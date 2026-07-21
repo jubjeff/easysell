@@ -26,7 +26,7 @@ export const PATCH = withJsonError(async function PATCH(
   if (e0 || !atual) return NextResponse.json({ error: "Demo não encontrada." }, { status: 404 });
 
   const patch: Record<string, unknown> = { editado_por: admin.id, atualizado_em: new Date().toISOString() };
-  for (const k of ["nicho", "script_padrao", "ativo", "ordem"]) {
+  for (const k of ["nicho", "script_padrao", "script_dm", "ativo", "ordem"]) {
     if (k in body) patch[k] = typeof body[k] === "string" ? body[k].trim() : body[k];
   }
 

@@ -16,6 +16,20 @@ const STAGE_COLOR: Record<LeadStage, string> = {
 
 const MEDALHA = ["🥇", "🥈", "🥉"];
 
+const ORIGEM_INFO: Record<string, { label: string; icon: string }> = {
+  google: { label: "Google", icon: "🔍" },
+  instagram: { label: "Instagram", icon: "📸" },
+  manual: { label: "Manual", icon: "✍️" },
+};
+
+/** Horas cruas → texto legível (min / h / dias), conforme a magnitude. */
+function formatHoras(h: number | null): string {
+  if (h == null) return "—";
+  if (h < 1) return `${Math.round(h * 60)}min`;
+  if (h < 48) return `${h.toFixed(1)}h`;
+  return `${(h / 24).toFixed(1)}d`;
+}
+
 export default function DashboardPage() {
   const [m, setM] = useState<any>(null);
   const [error, setError] = useState("");
@@ -100,6 +114,51 @@ export default function DashboardPage() {
           {m.conversaoDemo.fechados}/{m.conversaoDemo.demos}
         </span>
       </div>
+
+      {/* performance por canal de captação (google/instagram/manual) */}
+      {m.porOrigem && m.porOrigem.length > 0 && (
+        <div className="card">
+          <h2 className="tag-state text-dim mb-3">performance_por_origem</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="font-mono text-[10px] uppercase tracking-wider text-dim text-left">
+                <tr className="border-b border-navy-800">
+                  <th className="py-2 pr-2">Canal</th>
+                  <th className="py-2 pr-2 text-right">Leads</th>
+                  <th className="py-2 pr-2 text-right">Contatados</th>
+                  <th className="py-2 pr-2 text-right">Resposta</th>
+                  <th className="py-2 pr-2 text-right">Fechamento</th>
+                  <th className="py-2 pr-2 text-right">Tempo até resposta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {m.porOrigem.map((o: any) => {
+                  const info = ORIGEM_INFO[o.origem] ?? { label: o.origem, icon: "•" };
+                  return (
+                    <tr key={o.origem} className="border-b border-navy-800/50">
+                      <td className="py-2 pr-2 font-medium">
+                        {info.icon} {info.label}
+                      </td>
+                      <td className="py-2 pr-2 text-right data text-dim">{o.total}</td>
+                      <td className="py-2 pr-2 text-right data text-dim">{o.contactados}</td>
+                      <td className="py-2 pr-2 text-right data font-semibold text-lima">
+                        {o.taxaResposta}%
+                      </td>
+                      <td className="py-2 pr-2 text-right data text-paper">{o.taxaFechamento}%</td>
+                      <td className="py-2 pr-2 text-right data text-dim">
+                        {formatHoras(o.tempoMedioRespostaHoras)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <p className="font-mono text-[10px] text-dim/60 mt-2">
+            resposta = respondidos ÷ contatados · fechamento = fechados ÷ total de leads do canal
+          </p>
+        </div>
+      )}
 
       {/* ranking de vendedores — só admin */}
       {m.ranking && m.ranking.length > 0 && (

@@ -27,6 +27,7 @@ export const GET = withJsonError(async function GET(req: NextRequest) {
   if (sp.get("stage")) q = q.eq("stage", sp.get("stage"));
   if (sp.get("nicho")) q = q.eq("nicho", sp.get("nicho"));
   if (sp.get("cidade")) q = q.eq("cidade", sp.get("cidade"));
+  if (sp.get("origem")) q = q.eq("origem", sp.get("origem"));
   if (sp.get("q")) q = q.ilike("nome", `%${sp.get("q")}%`);
   const { data, error } = await q.limit(1000);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

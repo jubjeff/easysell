@@ -6,6 +6,8 @@ import { syncCommission } from "@/lib/comissao";
 
 export const dynamic = "force-dynamic";
 
+const RESPONDIDO_OU_ALEM = new Set(["respondeu", "demo_enviada", "negociacao", "fechado"]);
+
 /** Busca o lead respeitando o escopo do vendedor (admin vê qualquer um). */
 async function fetchScoped(id: string, scope: string | null) {
   let q = db().from("leads").select("*").eq("id", id);
@@ -64,6 +66,15 @@ export const PATCH = withJsonError(async function PATCH(
   for (const k of allowed) if (k in body) patch[k] = body[k];
   if ("stage" in body && body.stage !== current.stage) {
     patch.stage_changed_at = new Date().toISOString();
+    // grava contactado_em/respondido_em só na 1ª vez — base do tempo até
+    // resposta por origem (Módulo 2). Cobre o drag direto no Kanban (o
+    // disparo assistido já grava contactado_em antes, via /api/queue/[id]).
+    if (!current.contactado_em && body.stage !== "novo") {
+      patch.contactado_em = new Date().toISOString();
+    }
+    if (!current.respondido_em && RESPONDIDO_OU_ALEM.has(body.stage)) {
+      patch.respondido_em = new Date().toISOString();
+    }
   }
 
   let q = db().from("leads").update(patch).eq("id", params.id);

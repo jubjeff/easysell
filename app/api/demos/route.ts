@@ -28,7 +28,7 @@ export const GET = withJsonError(async function GET() {
  *  e o card em skeleton enquanto captura. */
 export const POST = withJsonError(async function POST(req: NextRequest) {
   const admin = await requireAdmin();
-  const { nicho, url, script_padrao, ativo } = await req.json();
+  const { nicho, url, script_padrao, script_dm, ativo } = await req.json();
   if (!nicho?.trim()) {
     return NextResponse.json({ error: "O nicho é obrigatório." }, { status: 400 });
   }
@@ -51,6 +51,7 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
       nicho: nicho.trim(),
       url: url.trim(),
       script_padrao: (script_padrao ?? "").trim(),
+      script_dm: (script_dm ?? "").trim() || null,
       ativo: ativo ?? true,
       ordem,
       thumbnail_status: "pending",

@@ -100,6 +100,25 @@ export default function ConfigPage() {
         </p>
       </div>
 
+      {/* DM do Instagram */}
+      <div className="card space-y-3">
+        <h2 className="text-sm font-bold text-zinc-400">DM do Instagram</h2>
+        <div>
+          <label className="label">Teto diário — sessão de DM</label>
+          <input
+            type="number"
+            min={1}
+            className="input max-w-40"
+            defaultValue={s.dm_limite_diario}
+            onBlur={(e) => e.target.value && patch({ dm_limite_diario: Number(e.target.value) })}
+          />
+        </div>
+        <p className="text-xs text-zinc-500">
+          Sem histórico de risco de ban nesse canal ainda — comece conservador (15–20/dia) e ajuste
+          aqui conforme a experiência.
+        </p>
+      </div>
+
       {/* janela */}
       <div className="card space-y-3">
         <h2 className="text-sm font-bold text-zinc-400">Janela de envio</h2>

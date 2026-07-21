@@ -77,6 +77,35 @@ export async function sentCounts(chipId: string): Promise<{ hoje: number; semana
   return { hoje: today.count ?? 0, semana: week.count ?? 0 };
 }
 
+/**
+ * Envios de hoje/semana de DM (Instagram) de um vendedor — sem chip, então
+ * conta por vendedor_id + chip_id IS NULL (só logs de DM têm chip nulo).
+ */
+export async function sentCountsDm(vendedorId: string): Promise<{ hoje: number; semana: number }> {
+  const br = nowBr();
+  const startDay = startOfDayBr(br);
+  const startWeek = new Date(startDay.getTime() - ((br.getUTCDay() + 6) % 7) * 86400000);
+
+  const client = db();
+  const [today, week] = await Promise.all([
+    client
+      .from("message_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("evento", "enviado")
+      .is("chip_id", null)
+      .eq("vendedor_id", vendedorId)
+      .gte("created_at", startDay.toISOString()),
+    client
+      .from("message_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("evento", "enviado")
+      .is("chip_id", null)
+      .eq("vendedor_id", vendedorId)
+      .gte("created_at", startWeek.toISOString()),
+  ]);
+  return { hoje: today.count ?? 0, semana: week.count ?? 0 };
+}
+
 /** Verifica se agora está dentro da janela de envio configurada (horário de Brasília). */
 export function inSendWindow(s: Settings, now = new Date()): { ok: boolean; motivo?: string } {
   const br = nowBr(now);

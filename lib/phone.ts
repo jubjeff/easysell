@@ -21,8 +21,9 @@ export function normalizePhone(raw: string): string | null {
   return null;
 }
 
-/** Telefone para exibição: (81) 99999-9999 */
-export function formatPhone(e164: string): string {
+/** Telefone para exibição: (81) 99999-9999. Sem telefone (lead só-Instagram) → "—". */
+export function formatPhone(e164: string | null | undefined): string {
+  if (!e164) return "—";
   const d = e164.replace(/\D/g, "").replace(/^55/, "");
   if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;

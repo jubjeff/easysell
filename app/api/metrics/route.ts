@@ -17,7 +17,9 @@ export const GET = withJsonError(async function GET() {
 async function buildMetrics(scope: string | null) {
   const client = db();
 
-  let leadsQ = client.from("leads").select("id, stage, nicho, cidade, vendedor_id");
+  let leadsQ = client
+    .from("leads")
+    .select("id, stage, nicho, cidade, vendedor_id, origem, contactado_em, respondido_em");
   let enviosQ = client
     .from("message_logs")
     .select("lead_id, template_id, campaign_id, vendedor_id")
@@ -79,6 +81,46 @@ async function buildMetrics(scope: string | null) {
   const porNicho = taxa((e) => leadById.get(e.lead_id)?.nicho ?? null);
   const porCidade = taxa((e) => leadById.get(e.lead_id)?.cidade ?? null);
 
+  // performance por canal de captação (google/instagram/manual) — usa o
+  // funil do próprio lead (contactado_em/respondido_em), não só envios de
+  // WhatsApp, pra já incluir o canal de DM do Instagram quando existir
+  const porOrigem = (() => {
+    const acc = new Map<
+      string,
+      { total: number; contactados: number; respondidos: number; fechados: number; somaHoras: number; comTempo: number }
+    >();
+    for (const l of leads ?? []) {
+      const key = (l as any).origem ?? "manual";
+      if (!acc.has(key))
+        acc.set(key, { total: 0, contactados: 0, respondidos: 0, fechados: 0, somaHoras: 0, comTempo: 0 });
+      const a = acc.get(key)!;
+      a.total++;
+      const contactadoEm = (l as any).contactado_em;
+      const respondidoEm = (l as any).respondido_em;
+      if (contactadoEm) a.contactados++;
+      if (respondidoEm) a.respondidos++;
+      if (l.stage === "fechado") a.fechados++;
+      if (contactadoEm && respondidoEm) {
+        const horas = (new Date(respondidoEm).getTime() - new Date(contactadoEm).getTime()) / 3_600_000;
+        if (horas >= 0) {
+          a.somaHoras += horas;
+          a.comTempo++;
+        }
+      }
+    }
+    return Array.from(acc.entries())
+      .map(([origem, a]) => ({
+        origem,
+        total: a.total,
+        contactados: a.contactados,
+        taxaResposta: a.contactados ? Math.round((a.respondidos / a.contactados) * 1000) / 10 : 0,
+        taxaFechamento: a.total ? Math.round((a.fechados / a.total) * 1000) / 10 : 0,
+        fechados: a.fechados,
+        tempoMedioRespostaHoras: a.comTempo ? Math.round((a.somaHoras / a.comTempo) * 10) / 10 : null,
+      }))
+      .sort((a, b) => b.total - a.total);
+  })();
+
   // conversão demo -> fechamento
   const demoOuAlem = (leads ?? []).filter((l) =>
     ["demo_enviada", "negociacao", "fechado"].includes(l.stage)
@@ -139,6 +181,7 @@ async function buildMetrics(scope: string | null) {
     porCampanha,
     porNicho: porNicho.sort((a, b) => b.taxa - a.taxa),
     porCidade: porCidade.sort((a, b) => b.taxa - a.taxa),
+    porOrigem,
     conversaoDemo: {
       demos: demoOuAlem,
       fechados,

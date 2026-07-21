@@ -53,19 +53,35 @@ export default function LeadPage() {
           <span className="tag-state text-dim">lead</span>
           <h1 className="text-2xl font-bold tracking-tight mt-1">{lead.nome}</h1>
           <p className="font-mono text-[11px] text-dim mt-1">
-            {lead.nicho} · {lead.cidade} · <span className="data">{formatPhone(lead.telefone)}</span>
+            {lead.nicho} · {lead.cidade} ·{" "}
+            <span className="data">
+              {lead.telefone ? formatPhone(lead.telefone) : lead.instagram_handle ? `@${lead.instagram_handle}` : "—"}
+            </span>
             {lead.rating ? ` · ${lead.rating}★ (${lead.qtd_avaliacoes})` : ""}
           </p>
         </div>
         <div className="flex gap-2">
-          <a
-            className="btn-primary"
-            href={waLink(lead.telefone)}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            🟢 WhatsApp
-          </a>
+          {lead.telefone ? (
+            <a
+              className="btn-primary"
+              href={waLink(lead.telefone)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              🟢 WhatsApp
+            </a>
+          ) : (
+            lead.instagram_handle && (
+              <a
+                className="btn-primary"
+                href={`https://instagram.com/${lead.instagram_handle}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                📸 Instagram
+              </a>
+            )
+          )}
           <button
             className="btn-danger"
             onClick={async () => {

@@ -1,6 +1,9 @@
 import { createHash } from "crypto";
 import { Lead, Template } from "./types";
 
+/** Fonte de texto a resolver: um Template (WhatsApp) ou um script de DM (demos.script_dm). */
+type MessageSource = Pick<Template, "corpo" | "social_proof">;
+
 /**
  * Resolve spin syntax {a|b|c} sorteando uma opção.
  * Blocos sem "|" (variáveis como {nome_negocio}) são preservados.
@@ -80,8 +83,8 @@ function cleanup(s: string): string {
  *  - {social_proof} legado (templates antigos);
  *  - spintax {a|b}.
  */
-export function generateMessage(template: Template, lead: Lead, vendedorNome = ""): string {
-  let corpo = template.corpo;
+export function generateMessage(source: MessageSource, lead: Lead, vendedorNome = ""): string {
+  let corpo = source.corpo;
 
   // 1. saudação adaptativa (com/sem primeiro_nome)
   const primeiro = (lead.primeiro_nome ?? "").trim();
@@ -92,7 +95,7 @@ export function generateMessage(template: Template, lead: Lead, vendedorNome = "
 
   // 3. social_proof legado (compat com templates antigos)
   const temProva = lead.rating != null && lead.rating >= 4 && (lead.qtd_avaliacoes ?? 0) >= 3;
-  corpo = corpo.replaceAll("{social_proof}", temProva && template.social_proof ? template.social_proof : "");
+  corpo = corpo.replaceAll("{social_proof}", temProva && source.social_proof ? source.social_proof : "");
 
   // 4. variáveis restantes
   corpo = fillVariables(corpo, lead, vendedorNome);
@@ -116,24 +119,24 @@ export function messageHash(msg: string): string {
  * sufixo neutro variável para desempatar.
  */
 export function generateUniqueMessage(
-  template: Template,
+  source: MessageSource,
   lead: Lead,
   usedHashes: Set<string>,
   maxTries = 10,
   vendedorNome = ""
 ): { mensagem: string; hash: string } {
   for (let i = 0; i < maxTries; i++) {
-    const mensagem = generateMessage(template, lead, vendedorNome);
+    const mensagem = generateMessage(source, lead, vendedorNome);
     const hash = messageHash(mensagem);
     if (!usedHashes.has(hash)) return { mensagem, hash };
   }
   const sufixos = ["Abraço!", "Fico no aguardo!", "Qualquer coisa estou por aqui!", "Obrigado!"];
   for (const sufixo of sufixos) {
-    const mensagem = generateMessage(template, lead, vendedorNome) + " " + sufixo;
+    const mensagem = generateMessage(source, lead, vendedorNome) + " " + sufixo;
     const hash = messageHash(mensagem);
     if (!usedHashes.has(hash)) return { mensagem, hash };
   }
   // último recurso: nunca deve acontecer na prática
-  const mensagem = generateMessage(template, lead, vendedorNome) + " (ref " + Date.now() + ")";
+  const mensagem = generateMessage(source, lead, vendedorNome) + " (ref " + Date.now() + ")";
   return { mensagem, hash: messageHash(mensagem) };
 }
