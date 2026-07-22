@@ -134,6 +134,7 @@ export interface Campaign {
   limiar_taxa_resposta: number;
   ativa: boolean;
   created_at: string;
+  restantes?: number;
 }
 
 export interface DispatchSession {

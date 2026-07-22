@@ -588,7 +588,7 @@ export default function SessaoPage() {
                 <option value="">Selecione…</option>
                 {campaigns.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.nome} ({c.nicho} · {c.cidade})
+                    {c.nome} ({c.nicho} · {c.cidade}) · {c.restantes ?? 0} restantes
                   </option>
                 ))}
               </select>

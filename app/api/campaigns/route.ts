@@ -2,17 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabase";
 import { requireUser, requireAdmin } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
+import { contarLeadsRestantes } from "@/lib/campaigns";
 
 export const dynamic = "force-dynamic";
 
+/** GET: campanhas + `restantes` (leads "Novo" do próprio usuário, ainda não
+ *  resolvidos numa fila) por campanha — o número que importa na hora de
+ *  escolher onde disparar, igual em qualquer papel (admin ou vendedor). */
 export const GET = withJsonError(async function GET() {
-  await requireUser();
-  const { data, error } = await db()
+  const me = await requireUser();
+  const client = db();
+  const { data, error } = await client
     .from("campaigns")
     .select("*, campaign_templates(template_id, templates(nome))")
     .order("created_at", { ascending: false });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ campaigns: data });
+
+  const restantes = await contarLeadsRestantes(client, me.id, data ?? []);
+  const campaigns = (data ?? []).map((c) => ({ ...c, restantes: restantes.get(c.id) ?? 0 }));
+  return NextResponse.json({ campaigns });
 });
 
 export const POST = withJsonError(async function POST(req: NextRequest) {

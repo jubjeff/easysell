@@ -216,6 +216,13 @@ export default function CampanhasPage() {
             <h2 className="font-bold">
               {c.nome}
               {!c.ativa && <span className="ml-2 badge bg-zinc-800 text-zinc-400">inativa</span>}
+              <span
+                className={`ml-2 badge ${
+                  c.restantes > 0 ? "bg-lima-faint text-lima" : "bg-zinc-800 text-zinc-500"
+                }`}
+              >
+                {c.restantes ?? 0} restantes
+              </span>
             </h2>
             <p className="text-sm text-zinc-400">
               {c.nicho} · {c.cidade} · limite {c.limite_diario}/dia · templates:{" "}

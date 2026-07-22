@@ -12,6 +12,7 @@ import { generateUniqueMessage } from "@/lib/spin";
 import { normalizeText } from "@/lib/text";
 import { requireUser } from "@/lib/auth";
 import { withJsonError } from "@/lib/api";
+import { getLeadsJaResolvidos } from "@/lib/campaigns";
 import { Campaign, Chip, Demo, Lead, Template } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -188,7 +189,7 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
   const nichoAlvo = normalizeText(campaign.nicho);
   const cidadeAlvo = normalizeText(campaign.cidade);
   const canalAlvo = isDm ? "instagram_dm" : "whatsapp";
-  const [{ data: candidatos }, { data: jaContactados }] = await Promise.all([
+  const [{ data: candidatos }, { data: jaContactados }, leadsJaResolvidos] = await Promise.all([
     client
       .from("leads")
       .select("*")
@@ -197,6 +198,7 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
       .eq("canal_contato_ativo", canalAlvo)
       .order("score", { ascending: false }),
     client.from("contacted_phones").select("telefone"),
+    getLeadsJaResolvidos(client),
   ]);
   // números que já receberam mensagem alguma vez NUNCA voltam para a fila de
   // WhatsApp, mesmo que o lead tenha sido excluído/reimportado (não se aplica
@@ -207,7 +209,9 @@ export const POST = withJsonError(async function POST(req: NextRequest) {
       (l) =>
         normalizeText(l.nicho) === nichoAlvo &&
         normalizeText(l.cidade) === cidadeAlvo &&
-        (isDm || !telefonesBloqueados.has(l.telefone))
+        (isDm || !telefonesBloqueados.has(l.telefone)) &&
+        // já resolvido (enviado/inválido/pulado) numa fila anterior — nunca reentra
+        !leadsJaResolvidos.has(l.id)
     )
     .slice(0, tamanhoFila);
 

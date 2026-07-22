@@ -47,3 +47,47 @@ export async function ensureCampaigns(
   }
   return criadas;
 }
+
+/**
+ * IDs de lead que já foram resolvidos numa fila alguma vez (enviado, número
+ * inválido ou pulado). Uma vez resolvido, o lead nunca mais deve reentrar
+ * numa fila nova — sem isso, pulados/inválidos reaparecem a cada campanha
+ * nova montada pro mesmo nicho+cidade, mesmo sem o vendedor pedir.
+ */
+export async function getLeadsJaResolvidos(client: SupabaseClient): Promise<Set<string>> {
+  const { data } = await client
+    .from("queue_items")
+    .select("lead_id")
+    .in("status", ["enviado", "numero_invalido", "pulado"]);
+  return new Set((data ?? []).map((r) => r.lead_id));
+}
+
+/**
+ * Quantos leads "Novo" do vendedor ainda estão disponíveis para cada
+ * campanha (nicho+cidade), descontando os já resolvidos numa fila alguma
+ * vez. Mesma comparação tolerante a acento/caixa usada para montar a fila.
+ */
+export async function contarLeadsRestantes(
+  client: SupabaseClient,
+  vendedorId: string,
+  campaigns: { id: string; nicho: string; cidade: string }[]
+): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  if (campaigns.length === 0) return map;
+
+  const [{ data: leads }, resolvidos] = await Promise.all([
+    client.from("leads").select("id, nicho, cidade").eq("vendedor_id", vendedorId).eq("stage", "novo"),
+    getLeadsJaResolvidos(client),
+  ]);
+  const disponiveis = (leads ?? []).filter((l) => !resolvidos.has(l.id));
+
+  for (const c of campaigns) {
+    const nichoAlvo = normalizeText(c.nicho);
+    const cidadeAlvo = normalizeText(c.cidade);
+    const n = disponiveis.filter(
+      (l) => normalizeText(l.nicho) === nichoAlvo && normalizeText(l.cidade) === cidadeAlvo
+    ).length;
+    map.set(c.id, n);
+  }
+  return map;
+}
