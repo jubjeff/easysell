@@ -176,10 +176,13 @@ export default function Nav() {
         </nav>
         <div className="mt-auto pt-4 border-t border-navy-800">
           {me && (
-            <p className="px-3 font-mono text-[11px] text-dim mb-2 truncate">
+            <Link
+              href="/perfil"
+              className="block px-3 font-mono text-[11px] text-dim hover:text-paper transition-colors mb-2 truncate"
+            >
               {me.nome}
               {isAdmin && <span className="text-viola"> · admin</span>}
-            </p>
+            </Link>
           )}
           <button
             onClick={logout}
@@ -246,10 +249,13 @@ export default function Nav() {
             ))}
             <div className="mt-2 pt-2 border-t border-navy-800 flex items-center justify-between px-3">
               {me && (
-                <p className="font-mono text-[11px] text-dim truncate">
+                <Link
+                  href="/perfil"
+                  className="font-mono text-[11px] text-dim hover:text-paper transition-colors truncate"
+                >
                   {me.nome}
                   {isAdmin && <span className="text-viola"> · admin</span>}
-                </p>
+                </Link>
               )}
               <button onClick={logout} className="text-sm text-dim hover:text-red-300 py-1.5">
                 ↩ Sair
